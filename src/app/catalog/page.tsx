@@ -1,10 +1,36 @@
-import { StoreStubScreen } from '@/components/store/StoreStubScreen';
+import { ProductCard } from '@/components/store/ProductCard';
+import { StoreScreen } from '@/components/store/StoreScreen';
+import { StoreSection } from '@/components/store/StoreSection';
+import { storeProducts } from '@/components/store/mock-products';
+import styles from '@/components/store/store.module.css';
+
+const catalogChips = ['All', 'Clothes', 'Accessories', 'Home', 'Tech'];
 
 export default function CatalogPage() {
   return (
-    <StoreStubScreen
-      title="Catalog"
-      description="Catalog screen placeholder. Product list, filters, and sorting will be implemented later."
-    />
+    <StoreScreen title="Catalog" subtitle="Placeholder items in storefront style">
+      <div className={styles.chipRow}>
+        {catalogChips.map((chip, index) => (
+          <span
+            key={chip}
+            className={`${styles.chip} ${index === 0 ? styles.chipActive : ''}`}
+          >
+            {chip}
+          </span>
+        ))}
+      </div>
+
+      <StoreSection title="All products">
+        <div className={styles.catalogGrid}>
+          {storeProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              href={`/products/${product.id}`}
+            />
+          ))}
+        </div>
+      </StoreSection>
+    </StoreScreen>
   );
 }

@@ -1,63 +1,62 @@
-'use client';
+import Link from 'next/link';
 
-import { Cell, List, Section, Text } from '@telegram-apps/telegram-ui';
+import { ProductCard } from '@/components/store/ProductCard';
+import { StoreScreen } from '@/components/store/StoreScreen';
+import { StoreSection } from '@/components/store/StoreSection';
+import { storeProducts } from '@/components/store/mock-products';
+import styles from '@/components/store/store.module.css';
 
-import { Link } from '@/components/Link/Link';
-import { Page } from '@/components/Page';
+const featuredProducts = storeProducts.slice(0, 4);
+const freshDrops = storeProducts.slice(4, 8);
 
-const screenLinks = [
-  {
-    href: '/catalog',
-    title: 'Catalog',
-    subtitle: 'Products list and filters will be added in the next stage',
-  },
-  {
-    href: '/products/demo-product',
-    title: 'Product Page',
-    subtitle: 'Route placeholder for an individual product screen',
-  },
-  {
-    href: '/cart',
-    title: 'Cart',
-    subtitle: 'Placeholder for cart and checkout logic',
-  },
-  {
-    href: '/profile',
-    title: 'Profile',
-    subtitle: 'Base user profile and settings screen',
-  },
-  {
-    href: '/orders',
-    title: 'My Orders',
-    subtitle: 'Order history and status placeholder',
-  },
-  {
-    href: '/admin',
-    title: 'Admin',
-    subtitle: 'Admin area scaffold without business logic',
-  },
-];
-
-export default function Home() {
+export default function HomePage() {
   return (
-    <Page back={false}>
-      <List>
-        <Section header="MainStore">
-          <Text>
-            Telegram Mini App baseline for the future MainStore shop.
-          </Text>
-          <Text>
-            This stage keeps only infrastructure and route placeholders.
-          </Text>
-        </Section>
-        <Section header="Store Screens">
-          {screenLinks.map((screen) => (
-            <Link key={screen.href} href={screen.href}>
-              <Cell subtitle={screen.subtitle}>{screen.title}</Cell>
-            </Link>
+    <StoreScreen
+      title="Home"
+      subtitle="Compact storefront ready for Telegram Mini App"
+      back={false}
+    >
+      <section className={styles.hero}>
+        <h2 className={styles.heroTitle}>New season essentials</h2>
+        <p className={styles.heroText}>
+          MainStore UI scaffold is ready. Product cards, sections, and navigation
+          are prepared for real data integration in the next stage.
+        </p>
+        <div className={styles.heroActions}>
+          <Link href="/catalog" className={styles.heroButton}>
+            Open catalog
+          </Link>
+          <Link href="/orders" className={styles.heroGhostButton}>
+            View orders
+          </Link>
+        </div>
+      </section>
+
+      <StoreSection title="Featured now" actionLabel="See all" actionHref="/catalog">
+        <div className={styles.scrollRow}>
+          {featuredProducts.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              href={`/products/${product.id}`}
+              compact
+            />
           ))}
-        </Section>
-      </List>
-    </Page>
+        </div>
+      </StoreSection>
+
+      <StoreSection title="Fresh drops" actionLabel="Catalog" actionHref="/catalog">
+        <div className={styles.scrollRow}>
+          {freshDrops.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              href={`/products/${product.id}`}
+              compact
+            />
+          ))}
+        </div>
+      </StoreSection>
+    </StoreScreen>
   );
 }

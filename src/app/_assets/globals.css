@@ -1,5 +1,21 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --store-bg: var(--tg-theme-secondary-bg-color, #f2f4f7);
+  --store-surface: var(--tg-theme-bg-color, #ffffff);
+  --store-surface-muted: var(--tg-theme-secondary-bg-color, #eef1f5);
+  --store-text: var(--tg-theme-text-color, #101828);
+  --store-hint: var(--tg-theme-hint-color, #667085);
+  --store-border: rgba(16, 24, 40, 0.12);
+  --store-accent: var(--tg-theme-button-color, #1d64f2);
+  --store-accent-text: var(--tg-theme-button-text-color, #ffffff);
+}
+
 body {
-  background: var(--tg-theme-secondary-bg-color, white);
+  background: var(--store-bg);
+  color: var(--store-text);
   padding: 0;
   margin: 0;
 }
