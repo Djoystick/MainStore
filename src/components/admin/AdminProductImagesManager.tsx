@@ -3,7 +3,8 @@
 import { useRef, useState, useTransition, type FormEventHandler } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { AdminProductImageItem } from '@/features/admin';
+import { StoreEmptyState } from '@/components/store/StoreEmptyState';
+import type { AdminProductImageItem } from '@/features/admin/types';
 
 import styles from './admin.module.css';
 
@@ -14,6 +15,9 @@ interface AdminProductImagesManagerProps {
 
 interface ImageRowEditorProps {
   image: AdminProductImageItem;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  onSwapOrder: (imageId: string, direction: 'up' | 'down') => Promise<string | null>;
 }
 
 function mapAdminImageError(error: string | undefined): string {
@@ -27,6 +31,8 @@ function mapAdminImageError(error: string | undefined): string {
     case 'invalid_image_payload':
     case 'image_url_required':
       return 'Image URL is required.';
+    case 'invalid_image_url':
+      return 'Image URL should start with http:// or https://.';
     case 'invalid_sort_order':
       return 'Sort order should be a non-negative integer.';
     case 'invalid_product':
@@ -39,7 +45,12 @@ function mapAdminImageError(error: string | undefined): string {
   }
 }
 
-function ImageRowEditor({ image }: ImageRowEditorProps) {
+function ImageRowEditor({
+  image,
+  canMoveUp,
+  canMoveDown,
+  onSwapOrder,
+}: ImageRowEditorProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [url, setUrl] = useState(image.url);
@@ -50,7 +61,12 @@ function ImageRowEditor({ image }: ImageRowEditorProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
 
-  const onSave = () => {
+  const runUpdate = (nextPayload?: {
+    url: string;
+    alt: string;
+    sortOrder: number;
+    isPrimary: boolean;
+  }) => {
     if (isPending || isSubmittingRef.current) {
       return;
     }
@@ -60,7 +76,8 @@ function ImageRowEditor({ image }: ImageRowEditorProps) {
     startTransition(async () => {
       setErrorMessage(null);
       setSuccessMessage(null);
-      const parsedSortOrder = Number(sortOrder);
+
+      const parsedSortOrder = nextPayload?.sortOrder ?? Number(sortOrder);
       if (!Number.isInteger(parsedSortOrder) || parsedSortOrder < 0) {
         setErrorMessage('Sort order must be a non-negative integer.');
         isSubmittingRef.current = false;
@@ -73,10 +90,10 @@ function ImageRowEditor({ image }: ImageRowEditorProps) {
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
           body: JSON.stringify({
-            url,
-            alt,
+            url: nextPayload?.url ?? url,
+            alt: nextPayload?.alt ?? alt,
             sortOrder: parsedSortOrder,
-            isPrimary,
+            isPrimary: nextPayload?.isPrimary ?? isPrimary,
           }),
         });
 
@@ -91,6 +108,7 @@ function ImageRowEditor({ image }: ImageRowEditorProps) {
           return;
         }
 
+        setSortOrder(String(parsedSortOrder));
         setSuccessMessage('Image updated.');
         router.refresh();
       } catch {
@@ -137,80 +155,135 @@ function ImageRowEditor({ image }: ImageRowEditorProps) {
     });
   };
 
+  const handleSwap = (direction: 'up' | 'down') => {
+    if (isPending || isSubmittingRef.current) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+
+    startTransition(async () => {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+
+      const swapError = await onSwapOrder(image.id, direction);
+      if (swapError) {
+        setErrorMessage(swapError);
+      } else {
+        setSuccessMessage('Image order updated.');
+        router.refresh();
+      }
+
+      isSubmittingRef.current = false;
+    });
+  };
+
   return (
     <article className={styles.adminImageCard}>
-      <div
-        className={styles.adminImagePreview}
-        style={{
-          backgroundImage: `linear-gradient(rgba(12, 18, 31, 0.15), rgba(12, 18, 31, 0.15)), url(${url})`,
-        }}
-      />
-      <div className={styles.adminForm}>
-        <label className={styles.adminField}>
-          <span className={styles.adminLabel}>Image URL</span>
-          <input
-            className={styles.adminInput}
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-          />
-        </label>
+      <div className={styles.adminImageCardLayout}>
+        <div
+          className={styles.adminImagePreview}
+          style={{
+            backgroundImage: `linear-gradient(rgba(12, 18, 31, 0.15), rgba(12, 18, 31, 0.15)), url(${url})`,
+          }}
+        />
 
-        <label className={styles.adminField}>
-          <span className={styles.adminLabel}>Alt</span>
-          <input
-            className={styles.adminInput}
-            value={alt}
-            onChange={(event) => setAlt(event.target.value)}
-          />
-        </label>
+        <div className={styles.adminForm}>
+          <div className={styles.adminCardHead}>
+            <div>
+              <h3 className={styles.adminCardTitle}>Image #{image.sortOrder + 1}</h3>
+              <p className={styles.adminCardSub}>
+                {image.isPrimary ? 'Primary image' : 'Gallery image'}
+              </p>
+            </div>
+            <div className={styles.adminActions}>
+              <button
+                type="button"
+                className={styles.adminActionButton}
+                disabled={!canMoveUp || isPending}
+                onClick={() => handleSwap('up')}
+                aria-label="Move image up"
+              >
+                Up
+              </button>
+              <button
+                type="button"
+                className={styles.adminActionButton}
+                disabled={!canMoveDown || isPending}
+                onClick={() => handleSwap('down')}
+                aria-label="Move image down"
+              >
+                Down
+              </button>
+            </div>
+          </div>
 
-        <div className={styles.adminInlineRow}>
           <label className={styles.adminField}>
-            <span className={styles.adminLabel}>Sort order</span>
+            <span className={styles.adminLabel}>Image URL</span>
             <input
-              type="number"
-              min="0"
-              step="1"
               className={styles.adminInput}
-              value={sortOrder}
-              onChange={(event) => setSortOrder(event.target.value)}
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
             />
           </label>
 
-          <label className={styles.adminCheckboxRow}>
+          <label className={styles.adminField}>
+            <span className={styles.adminLabel}>Alt</span>
             <input
-              type="checkbox"
-              className={styles.adminCheckbox}
-              checked={isPrimary}
-              onChange={(event) => setIsPrimary(event.target.checked)}
+              className={styles.adminInput}
+              value={alt}
+              onChange={(event) => setAlt(event.target.value)}
             />
-            <span className={styles.adminLabel}>Primary</span>
           </label>
-        </div>
 
-        <div className={styles.adminActions}>
-          <button
-            type="button"
-            className={styles.adminActionButton}
-            onClick={onSave}
-            disabled={isPending}
-            aria-label="Save product image"
-          >
-            {isPending ? 'Saving...' : 'Save'}
-          </button>
-          <button
-            type="button"
-            className={styles.adminDangerButton}
-            onClick={onDelete}
-            disabled={isPending}
-            aria-label="Delete product image"
-          >
-            Delete
-          </button>
-        </div>
+          <div className={styles.adminInlineRow}>
+            <label className={styles.adminField}>
+              <span className={styles.adminLabel}>Sort order</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                className={styles.adminInput}
+                value={sortOrder}
+                onChange={(event) => setSortOrder(event.target.value)}
+              />
+            </label>
 
-        {errorMessage && <p className={styles.adminError}>{errorMessage}</p>}
-        {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
+            <label className={styles.adminCheckboxRow}>
+              <input
+                type="checkbox"
+                className={styles.adminCheckbox}
+                checked={isPrimary}
+                onChange={(event) => setIsPrimary(event.target.checked)}
+              />
+              <span className={styles.adminLabel}>Primary image</span>
+            </label>
+          </div>
+
+          <div className={styles.adminActions}>
+            <button
+              type="button"
+              className={styles.adminActionButton}
+              onClick={() => runUpdate()}
+              disabled={isPending}
+              aria-label="Save product image"
+            >
+              {isPending ? 'Saving...' : 'Save image'}
+            </button>
+            <button
+              type="button"
+              className={styles.adminDangerButton}
+              onClick={onDelete}
+              disabled={isPending}
+              aria-label="Delete product image"
+            >
+              Delete image
+            </button>
+          </div>
+
+          {errorMessage && <p className={styles.adminError}>{errorMessage}</p>}
+          {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
+        </div>
       </div>
     </article>
   );
@@ -222,9 +295,10 @@ export function AdminProductImagesManager({
 }: AdminProductImagesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const nextSortOrder = images.reduce((max, image) => Math.max(max, image.sortOrder), -1) + 1;
   const [url, setUrl] = useState('');
   const [alt, setAlt] = useState('');
-  const [sortOrder, setSortOrder] = useState('0');
+  const [sortOrder, setSortOrder] = useState(String(nextSortOrder));
   const [isPrimary, setIsPrimary] = useState(images.length === 0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -275,7 +349,7 @@ export function AdminProductImagesManager({
 
         setUrl('');
         setAlt('');
-        setSortOrder('0');
+        setSortOrder(String(parsedSortOrder + 1));
         setIsPrimary(false);
         setSuccessMessage('Image added.');
         router.refresh();
@@ -287,9 +361,77 @@ export function AdminProductImagesManager({
     });
   };
 
+  const onSwapOrder = async (
+    sourceImageId: string,
+    direction: 'up' | 'down',
+  ): Promise<string | null> => {
+    const sourceIndex = images.findIndex((image) => image.id === sourceImageId);
+    if (sourceIndex === -1) {
+      return 'Requested image is no longer available.';
+    }
+
+    const targetIndex = sourceIndex + (direction === 'up' ? -1 : 1);
+    const sourceImage = images[sourceIndex];
+    const targetImage = images[targetIndex];
+
+    if (!sourceImage || !targetImage) {
+      return 'Cannot move image further.';
+    }
+
+    const requests = [
+      {
+        id: sourceImage.id,
+        payload: {
+          url: sourceImage.url,
+          alt: sourceImage.alt ?? '',
+          sortOrder: targetImage.sortOrder,
+          isPrimary: sourceImage.isPrimary,
+        },
+      },
+      {
+        id: targetImage.id,
+        payload: {
+          url: targetImage.url,
+          alt: targetImage.alt ?? '',
+          sortOrder: sourceImage.sortOrder,
+          isPrimary: targetImage.isPrimary,
+        },
+      },
+    ];
+
+    for (const request of requests) {
+      const response = await fetch(`/api/admin/product-images/${request.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(request.payload),
+      });
+
+      const data = (await response.json().catch(() => null)) as
+        | { ok: true }
+        | { ok: false; error?: string }
+        | null;
+
+      if (!response.ok || !data || !data.ok) {
+        const errorCode = data && !data.ok ? data.error : undefined;
+        return mapAdminImageError(errorCode);
+      }
+    }
+
+    return null;
+  };
+
   return (
     <section className={styles.adminCard}>
-      <h2 className={styles.adminCardTitle}>Product images</h2>
+      <div className={styles.adminCardHead}>
+        <div>
+          <h2 className={styles.adminCardTitle}>Product images</h2>
+          <p className={styles.adminCardSub}>
+            Manage primary image, gallery order, and explicit sort positions.
+          </p>
+        </div>
+        <span className={styles.adminStatusBadge}>{images.length} images</span>
+      </div>
 
       <form className={styles.adminForm} onSubmit={onAddImage} aria-busy={isPending}>
         <label className={styles.adminField}>
@@ -298,6 +440,7 @@ export function AdminProductImagesManager({
             className={styles.adminInput}
             value={url}
             onChange={(event) => setUrl(event.target.value)}
+            placeholder="https://..."
             required
           />
         </label>
@@ -348,11 +491,24 @@ export function AdminProductImagesManager({
         {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
       </form>
 
-      <div className={styles.adminImageList}>
-        {images.map((image) => (
-          <ImageRowEditor key={image.id} image={image} />
-        ))}
-      </div>
+      {images.length === 0 ? (
+        <StoreEmptyState
+          title="No images yet"
+          description="Add a primary image to make the product card look complete in storefront and admin."
+        />
+      ) : (
+        <div className={styles.adminImageList}>
+          {images.map((image, index) => (
+            <ImageRowEditor
+              key={image.id}
+              image={image}
+              canMoveUp={index > 0}
+              canMoveDown={index < images.length - 1}
+              onSwapOrder={onSwapOrder}
+            />
+          ))}
+        </div>
+      )}
     </section>
   );
 }

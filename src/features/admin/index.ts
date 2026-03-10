@@ -11,10 +11,13 @@ export {
   createAdminCategory,
   createAdminProduct,
   createAdminProductImage,
+  deleteAdminProduct,
   deleteAdminProductImage,
+  duplicateAdminProduct,
   updateAdminCategory,
   updateAdminOrderStatus,
   updateAdminProduct,
+  updateAdminProductFeatured,
   updateAdminProductImage,
   updateAdminProductStatus,
 } from './mutations';

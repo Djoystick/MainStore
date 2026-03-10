@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
+  deleteAdminProduct,
   getAdminRequestAccess,
   updateAdminProduct,
+  updateAdminProductFeatured,
   updateAdminProductStatus,
   type ProductStatus,
   type ProductUpsertInput,
@@ -15,6 +17,15 @@ function getAccessStatusCode(reason: string): number {
 
 function isProductStatus(value: unknown): value is ProductStatus {
   return value === 'draft' || value === 'active' || value === 'archived';
+}
+
+function isFeaturedPayload(value: unknown): value is { isFeatured: boolean } {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return Object.keys(record).length === 1 && typeof record.isFeatured === 'boolean';
 }
 
 function isProductUpsertInput(value: unknown): value is ProductUpsertInput {
@@ -87,6 +98,26 @@ export async function PATCH(
     return NextResponse.json({ ok: true });
   }
 
+  if (isFeaturedPayload(payload)) {
+    const result = await updateAdminProductFeatured(productId, payload.isFeatured);
+
+    if (!result.ok) {
+      const status =
+        result.error === 'not_configured'
+          ? 503
+          : result.error === 'product_not_found'
+            ? 404
+            : 400;
+      const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
+      return NextResponse.json(
+        { ok: false, error: result.error, details },
+        { status },
+      );
+    }
+
+    return NextResponse.json({ ok: true });
+  }
+
   if (!isProductUpsertInput(payload)) {
     return NextResponse.json(
       { ok: false, error: 'invalid_product_payload' },
@@ -96,7 +127,12 @@ export async function PATCH(
 
   const result = await updateAdminProduct(productId, payload);
   if (!result.ok) {
-    const status = result.error === 'not_configured' ? 503 : 400;
+    const status =
+      result.error === 'not_configured'
+        ? 503
+        : result.error === 'product_not_found'
+          ? 404
+          : 400;
     const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
       { ok: false, error: result.error, details },
@@ -105,4 +141,42 @@ export async function PATCH(
   }
 
   return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ productId: string }> },
+) {
+  const access = await getAdminRequestAccess(request);
+  if (!access.ok) {
+    return NextResponse.json(
+      { ok: false, error: 'admin_access_denied' },
+      { status: getAccessStatusCode(access.reason ?? 'forbidden') },
+    );
+  }
+
+  const { productId } = await params;
+  if (!productId) {
+    return NextResponse.json(
+      { ok: false, error: 'product_id_required' },
+      { status: 400 },
+    );
+  }
+
+  const result = await deleteAdminProduct(productId);
+  if (!result.ok || !result.data) {
+    const status =
+      result.error === 'not_configured'
+        ? 503
+        : result.error === 'product_not_found'
+          ? 404
+          : 400;
+    const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
+    return NextResponse.json(
+      { ok: false, error: result.error, details },
+      { status },
+    );
+  }
+
+  return NextResponse.json({ ok: true, summary: result.data });
 }

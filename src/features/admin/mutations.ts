@@ -8,6 +8,7 @@ import type { OrderStatus, ProductImageUpsertInput, ProductStatus, ProductUpsert
 type ProductRow = Database['public']['Tables']['products']['Row'];
 type ProductImageRow = Database['public']['Tables']['product_images']['Row'];
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
+type CollectionItemRow = Database['public']['Tables']['collection_items']['Row'];
 
 const PRODUCT_STATUS_VALUES: ProductStatus[] = ['draft', 'active', 'archived'];
 const ORDER_STATUS_VALUES: OrderStatus[] = [
@@ -43,6 +44,27 @@ function parseNullableNumber(value: number | null | undefined): number | null {
   return value;
 }
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+function mapDatabaseError(error: string | null | undefined, fallback: string): string {
+  if (!error) {
+    return fallback;
+  }
+
+  if (error.includes('duplicate key value') && error.includes('products_slug_key')) {
+    return 'slug_conflict';
+  }
+
+  return error;
+}
+
 function validateProductInput(input: ProductUpsertInput): string | null {
   if (!isSlugValid(normalizeText(input.slug, 120))) {
     return 'invalid_slug';
@@ -55,6 +77,9 @@ function validateProductInput(input: ProductUpsertInput): string | null {
   }
   if (!normalizeText(input.currency, 3)) {
     return 'currency_required';
+  }
+  if (!/^[A-Za-z]{3}$/.test(normalizeText(input.currency, 3))) {
+    return 'invalid_currency';
   }
   if (!Number.isFinite(input.price) || input.price < 0) {
     return 'invalid_price';
@@ -70,12 +95,68 @@ function validateProductInput(input: ProductUpsertInput): string | null {
 }
 
 function validateImageInput(input: ProductImageUpsertInput): string | null {
-  if (!normalizeText(input.url, 2000)) {
+  const normalizedUrl = normalizeText(input.url, 2000);
+  if (!normalizedUrl) {
     return 'image_url_required';
+  }
+  if (!isHttpUrl(normalizedUrl)) {
+    return 'invalid_image_url';
   }
   if (!Number.isInteger(input.sortOrder) || input.sortOrder < 0) {
     return 'invalid_sort_order';
   }
+  return null;
+}
+
+async function getProductRow(
+  productId: string,
+): Promise<
+  | { ok: true; product: ProductRow }
+  | { ok: false; error: string }
+> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const result = await client
+    .from('products')
+    .select('*')
+    .eq('id', productId)
+    .maybeSingle();
+
+  if (result.error || !result.data) {
+    return { ok: false, error: 'product_not_found' };
+  }
+
+  return { ok: true, product: result.data as ProductRow };
+}
+
+async function getUniqueDuplicateSlug(baseSlug: string): Promise<string | null> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return null;
+  }
+
+  const baseCandidate = `${normalizeText(baseSlug, 120)}-copy`.slice(0, 120);
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const suffix = attempt === 0 ? '' : `-${attempt + 1}`;
+    const candidate = `${baseCandidate}${suffix}`.slice(0, 120);
+    const result = await client
+      .from('products')
+      .select('id')
+      .eq('slug', candidate)
+      .maybeSingle();
+
+    if (result.error) {
+      return null;
+    }
+
+    if (!result.data) {
+      return candidate;
+    }
+  }
+
   return null;
 }
 
@@ -161,7 +242,10 @@ export async function createAdminProduct(
   };
 
   if (typedResult.error || !typedResult.data) {
-    return { ok: false, error: typedResult.error?.message || 'create_product_failed' };
+    return {
+      ok: false,
+      error: mapDatabaseError(typedResult.error?.message, 'create_product_failed'),
+    };
   }
 
   return {
@@ -207,10 +291,19 @@ export async function updateAdminProduct(
   const result = await client
     .from('products')
     .update(payload as never)
-    .eq('id', productId);
+    .eq('id', productId)
+    .select('id')
+    .maybeSingle();
+  const typedResult = result as {
+    data: Pick<ProductRow, 'id'> | null;
+    error: { message: string } | null;
+  };
 
-  if (result.error) {
-    return { ok: false, error: result.error.message };
+  if (typedResult.error || !typedResult.data) {
+    return {
+      ok: false,
+      error: mapDatabaseError(typedResult.error?.message, 'product_not_found'),
+    };
   }
 
   return { ok: true };
@@ -232,13 +325,263 @@ export async function updateAdminProductStatus(
   const result = await client
     .from('products')
     .update({ status } as never)
-    .eq('id', productId);
+    .eq('id', productId)
+    .select('id')
+    .maybeSingle();
+  const typedResult = result as {
+    data: Pick<ProductRow, 'id'> | null;
+    error: { message: string } | null;
+  };
 
-  if (result.error) {
-    return { ok: false, error: result.error.message };
+  if (typedResult.error || !typedResult.data) {
+    return { ok: false, error: typedResult.error?.message || 'product_not_found' };
   }
 
   return { ok: true };
+}
+
+export async function updateAdminProductFeatured(
+  productId: string,
+  isFeatured: boolean,
+): Promise<MutationResult> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const result = await client
+    .from('products')
+    .update({ is_featured: isFeatured } as never)
+    .eq('id', productId)
+    .select('id')
+    .maybeSingle();
+  const typedResult = result as {
+    data: Pick<ProductRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedResult.error || !typedResult.data) {
+    return { ok: false, error: typedResult.error?.message || 'product_not_found' };
+  }
+
+  return { ok: true };
+}
+
+export async function duplicateAdminProduct(
+  productId: string,
+): Promise<MutationResult<{ id: string }>> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const productResult = await getProductRow(productId);
+  if (!productResult.ok) {
+    return { ok: false, error: productResult.error };
+  }
+
+  const duplicateSlug = await getUniqueDuplicateSlug(productResult.product.slug);
+  if (!duplicateSlug) {
+    return { ok: false, error: 'duplicate_slug_generation_failed' };
+  }
+
+  const duplicateTitle = normalizeText(`${productResult.product.title} Copy`, 180);
+  const createResult = await client
+    .from('products')
+    .insert(
+      {
+        slug: duplicateSlug,
+        title: duplicateTitle || 'Product copy',
+        short_description: productResult.product.short_description,
+        description: productResult.product.description,
+        price: productResult.product.price,
+        compare_at_price: productResult.product.compare_at_price,
+        currency: productResult.product.currency,
+        status: 'draft',
+        is_featured: false,
+        stock_quantity: productResult.product.stock_quantity,
+        category_id: productResult.product.category_id,
+      } as never,
+    )
+    .select('id')
+    .single();
+  const typedCreateResult = createResult as {
+    data: Pick<ProductRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedCreateResult.error || !typedCreateResult.data) {
+    return {
+      ok: false,
+      error: mapDatabaseError(typedCreateResult.error?.message, 'duplicate_product_failed'),
+    };
+  }
+
+  const duplicateProductId = typedCreateResult.data.id;
+
+  const [imagesResult, collectionItemsResult] = await Promise.all([
+    client
+      .from('product_images')
+      .select('*')
+      .eq('product_id', productId)
+      .order('sort_order', { ascending: true }),
+    client
+      .from('collection_items')
+      .select('*')
+      .eq('product_id', productId)
+      .order('sort_order', { ascending: true }),
+  ]);
+
+  if (imagesResult.error) {
+    return { ok: false, error: imagesResult.error.message };
+  }
+
+  if (collectionItemsResult.error) {
+    return { ok: false, error: collectionItemsResult.error.message };
+  }
+
+  const imageRows = (imagesResult.data ?? []) as ProductImageRow[];
+  if (imageRows.length > 0) {
+    const imageInsertResult = await client
+      .from('product_images')
+      .insert(
+        imageRows.map((row) => ({
+          product_id: duplicateProductId,
+          url: row.url,
+          alt: row.alt,
+          sort_order: row.sort_order,
+          is_primary: row.is_primary,
+        })) as never,
+      );
+
+    if (imageInsertResult.error) {
+      await client.from('products').delete().eq('id', duplicateProductId);
+      return { ok: false, error: imageInsertResult.error.message };
+    }
+  }
+
+  const collectionItemRows = (collectionItemsResult.data ?? []) as CollectionItemRow[];
+  if (collectionItemRows.length > 0) {
+    const collectionInsertResult = await client
+      .from('collection_items')
+      .insert(
+        collectionItemRows.map((row) => ({
+          collection_id: row.collection_id,
+          product_id: duplicateProductId,
+          sort_order: row.sort_order,
+        })) as never,
+      );
+
+    if (collectionInsertResult.error) {
+      await client.from('product_images').delete().eq('product_id', duplicateProductId);
+      await client.from('products').delete().eq('id', duplicateProductId);
+      return { ok: false, error: collectionInsertResult.error.message };
+    }
+  }
+
+  return {
+    ok: true,
+    data: { id: duplicateProductId },
+  };
+}
+
+export async function deleteAdminProduct(
+  productId: string,
+): Promise<
+  MutationResult<{
+    detachedOrderItemsCount: number;
+    removedImagesCount: number;
+    removedCollectionLinksCount: number;
+    removedFavoritesCount: number;
+    removedCartItemsCount: number;
+  }>
+> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const productResult = await getProductRow(productId);
+  if (!productResult.ok) {
+    return { ok: false, error: productResult.error };
+  }
+
+  const [imagesCountResult, collectionCountResult, favoritesCountResult, cartItemsCountResult, orderItemsCountResult] =
+    await Promise.all([
+      client.from('product_images').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+      client.from('collection_items').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+      client.from('favorites').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+      client.from('cart_items').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+      client.from('order_items').select('id', { count: 'exact', head: true }).eq('product_id', productId),
+    ]);
+
+  if (
+    imagesCountResult.error ||
+    collectionCountResult.error ||
+    favoritesCountResult.error ||
+    cartItemsCountResult.error ||
+    orderItemsCountResult.error
+  ) {
+    return { ok: false, error: 'delete_precheck_failed' };
+  }
+
+  const detachOrderItemsResult = await client
+    .from('order_items')
+    .update({ product_id: null } as never)
+    .eq('product_id', productId);
+  if (detachOrderItemsResult.error) {
+    return { ok: false, error: detachOrderItemsResult.error.message };
+  }
+
+  const [deleteCollectionsResult, deleteFavoritesResult, deleteCartItemsResult, deleteImagesResult] =
+    await Promise.all([
+      client.from('collection_items').delete().eq('product_id', productId),
+      client.from('favorites').delete().eq('product_id', productId),
+      client.from('cart_items').delete().eq('product_id', productId),
+      client.from('product_images').delete().eq('product_id', productId),
+    ]);
+
+  if (deleteCollectionsResult.error) {
+    return { ok: false, error: deleteCollectionsResult.error.message };
+  }
+  if (deleteFavoritesResult.error) {
+    return { ok: false, error: deleteFavoritesResult.error.message };
+  }
+  if (deleteCartItemsResult.error) {
+    return { ok: false, error: deleteCartItemsResult.error.message };
+  }
+  if (deleteImagesResult.error) {
+    return { ok: false, error: deleteImagesResult.error.message };
+  }
+
+  const deleteProductResult = await client
+    .from('products')
+    .delete()
+    .eq('id', productId)
+    .select('id')
+    .maybeSingle();
+  const typedDeleteProductResult = deleteProductResult as {
+    data: Pick<ProductRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedDeleteProductResult.error || !typedDeleteProductResult.data) {
+    return {
+      ok: false,
+      error: typedDeleteProductResult.error?.message || 'delete_product_failed',
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      detachedOrderItemsCount: orderItemsCountResult.count ?? 0,
+      removedImagesCount: imagesCountResult.count ?? 0,
+      removedCollectionLinksCount: collectionCountResult.count ?? 0,
+      removedFavoritesCount: favoritesCountResult.count ?? 0,
+      removedCartItemsCount: cartItemsCountResult.count ?? 0,
+    },
+  };
 }
 
 export async function createAdminProductImage(

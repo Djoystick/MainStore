@@ -40,6 +40,12 @@ export interface AdminProductDetail extends AdminProductListItem {
   shortDescription: string | null;
   description: string | null;
   images: AdminProductImageItem[];
+  collectionTitles: string[];
+  collectionsCount: number;
+  imagesCount: number;
+  favoritesCount: number;
+  cartItemsCount: number;
+  orderItemsCount: number;
 }
 
 export interface AdminOrderListItem {

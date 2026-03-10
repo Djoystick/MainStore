@@ -1,7 +1,12 @@
 import Link from 'next/link';
 
+import { AdminProductDangerZone } from '@/components/admin/AdminProductDangerZone';
+import { AdminProductDuplicateButton } from '@/components/admin/AdminProductDuplicateButton';
+import { AdminProductFeatureToggle } from '@/components/admin/AdminProductFeatureToggle';
 import { AdminProductForm } from '@/components/admin/AdminProductForm';
 import { AdminProductImagesManager } from '@/components/admin/AdminProductImagesManager';
+import { AdminProductOverviewCard } from '@/components/admin/AdminProductOverviewCard';
+import { AdminProductStatusControl } from '@/components/admin/AdminProductStatusControl';
 import { AdminScreen } from '@/components/admin/AdminScreen';
 import adminStyles from '@/components/admin/admin.module.css';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
@@ -18,7 +23,7 @@ export default async function AdminEditProductPage({
   const detailResult = await getAdminProductDetail(productId);
 
   return (
-    <AdminScreen title="Edit Product" subtitle="Update fields and images" back={true}>
+    <AdminScreen title="Edit Product" subtitle="Manage content, publication, images, and deletion" back={true}>
       {detailResult.message && (
         <section
           className={classNames(
@@ -42,9 +47,14 @@ export default async function AdminEditProductPage({
         </section>
       )}
 
-      <Link href="/admin/products" className={adminStyles.adminActionLink}>
-        Back to products
-      </Link>
+      <div className={adminStyles.adminActions}>
+        <Link href="/admin/products" className={adminStyles.adminActionLink}>
+          Back to products
+        </Link>
+        {detailResult.product && (
+          <AdminProductDuplicateButton productId={detailResult.product.id} label="Duplicate card" />
+        )}
+      </div>
 
       {!detailResult.product ? (
         <StoreEmptyState
@@ -54,17 +64,39 @@ export default async function AdminEditProductPage({
           actionHref="/admin/products"
         />
       ) : (
-        <>
+        <div className={adminStyles.adminSectionStack}>
+          <AdminProductOverviewCard product={detailResult.product} />
+
+          <section className={adminStyles.adminCard}>
+            <h2 className={adminStyles.adminCardTitle}>Quick controls</h2>
+            <p className={adminStyles.adminCardSub}>
+              Adjust publication and promotion without opening the full form.
+            </p>
+            <div className={adminStyles.adminStackActions}>
+              <AdminProductStatusControl
+                productId={detailResult.product.id}
+                initialStatus={detailResult.product.status}
+              />
+              <AdminProductFeatureToggle
+                productId={detailResult.product.id}
+                initialIsFeatured={detailResult.product.isFeatured}
+              />
+            </div>
+          </section>
+
           <AdminProductForm
             mode="edit"
             product={detailResult.product}
             categories={detailResult.categories}
           />
+
           <AdminProductImagesManager
             productId={detailResult.product.id}
             images={detailResult.product.images}
           />
-        </>
+
+          <AdminProductDangerZone product={detailResult.product} />
+        </div>
       )}
     </AdminScreen>
   );

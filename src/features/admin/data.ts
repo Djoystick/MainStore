@@ -20,6 +20,8 @@ import type {
 type ProductRow = Database['public']['Tables']['products']['Row'];
 type ProductImageRow = Database['public']['Tables']['product_images']['Row'];
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
+type CollectionRow = Database['public']['Tables']['collections']['Row'];
+type CollectionItemRow = Database['public']['Tables']['collection_items']['Row'];
 type OrderRow = Database['public']['Tables']['orders']['Row'];
 type OrderItemRow = Database['public']['Tables']['order_items']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
@@ -170,6 +172,18 @@ function mapImageList(rows: ProductImageRow[]): AdminProductImageItem[] {
       isPrimary: row.is_primary,
       createdAt: row.created_at,
     }));
+}
+
+function mapCollectionTitles(
+  collectionRows: CollectionRow[],
+  collectionItemRows: CollectionItemRow[],
+): string[] {
+  const collectionsById = new Map(collectionRows.map((row) => [row.id, row]));
+
+  return [...collectionItemRows]
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((row) => collectionsById.get(row.collection_id)?.title ?? null)
+    .filter((value): value is string => Boolean(value));
 }
 
 export async function getAdminCategories(): Promise<AdminCategoriesResult> {
@@ -422,6 +436,104 @@ export async function getAdminProductDetail(
     ? categories.find((category) => category.id === productRow.category_id)?.title ?? null
     : null;
 
+  const [collectionItemsResult, favoritesCountResult, cartItemsCountResult, orderItemsCountResult] =
+    await Promise.all([
+      client
+        .from('collection_items')
+        .select('*')
+        .eq('product_id', productId)
+        .order('sort_order', { ascending: true }),
+      client
+        .from('favorites')
+        .select('id', { count: 'exact', head: true })
+        .eq('product_id', productId),
+      client
+        .from('cart_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('product_id', productId),
+      client
+        .from('order_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('product_id', productId),
+    ]);
+
+  if (collectionItemsResult.error) {
+    return {
+      status: 'error',
+      product: null,
+      categories: [],
+      message: toPublicDataErrorMessage(
+        'Could not load product collections right now.',
+        collectionItemsResult.error.message,
+      ),
+    };
+  }
+
+  if (favoritesCountResult.error) {
+    return {
+      status: 'error',
+      product: null,
+      categories: [],
+      message: toPublicDataErrorMessage(
+        'Could not load product favorites summary right now.',
+        favoritesCountResult.error.message,
+      ),
+    };
+  }
+
+  if (cartItemsCountResult.error) {
+    return {
+      status: 'error',
+      product: null,
+      categories: [],
+      message: toPublicDataErrorMessage(
+        'Could not load product cart summary right now.',
+        cartItemsCountResult.error.message,
+      ),
+    };
+  }
+
+  if (orderItemsCountResult.error) {
+    return {
+      status: 'error',
+      product: null,
+      categories: [],
+      message: toPublicDataErrorMessage(
+        'Could not load product order history summary right now.',
+        orderItemsCountResult.error.message,
+      ),
+    };
+  }
+
+  const collectionItemRows = (collectionItemsResult.data ?? []) as CollectionItemRow[];
+  let collectionTitles: string[] = [];
+  if (collectionItemRows.length > 0) {
+    const collectionIds = Array.from(new Set(collectionItemRows.map((row) => row.collection_id)));
+    const collectionsResult = await client
+      .from('collections')
+      .select('*')
+      .in('id', collectionIds);
+
+    if (collectionsResult.error) {
+      return {
+        status: 'error',
+        product: null,
+        categories: [],
+        message: toPublicDataErrorMessage(
+          'Could not load linked collections right now.',
+          collectionsResult.error.message,
+        ),
+      };
+    }
+
+    collectionTitles = mapCollectionTitles(
+      (collectionsResult.data ?? []) as CollectionRow[],
+      collectionItemRows,
+    );
+  }
+
+  const imageItems = mapImageList((imagesResult.data ?? []) as ProductImageRow[]);
+
   return {
     status: 'ok',
     categories,
@@ -441,11 +553,16 @@ export async function getAdminProductDetail(
       categoryTitle,
       updatedAt: productRow.updated_at,
       primaryImageUrl:
-        ((imagesResult.data ?? []) as ProductImageRow[]).find((row) => row.is_primary)?.url ??
-        null,
+        imageItems.find((row) => row.isPrimary)?.url ?? null,
       shortDescription: productRow.short_description,
       description: productRow.description,
-      images: mapImageList((imagesResult.data ?? []) as ProductImageRow[]),
+      images: imageItems,
+      collectionTitles,
+      collectionsCount: collectionTitles.length,
+      imagesCount: imageItems.length,
+      favoritesCount: favoritesCountResult.count ?? 0,
+      cartItemsCount: cartItemsCountResult.count ?? 0,
+      orderItemsCount: orderItemsCountResult.count ?? 0,
     },
   };
 }
