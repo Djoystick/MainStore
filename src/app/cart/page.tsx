@@ -181,8 +181,8 @@ export default async function CartPage() {
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Следующий шаг</h2>
             <p className={styles.panelText}>
-              На оформлении заказ создаётся с отдельным payment status, а затем открывается sandbox payment flow.
-              Сводка по скидкам и финальная сумма подтверждаются на сервере.
+              На оформлении заказ создаётся с отдельным статусом оплаты, а затем открывается
+              тестовый платёжный шаг. Сводка по скидкам и финальная сумма подтверждаются на сервере.
             </p>
           </section>
         </>

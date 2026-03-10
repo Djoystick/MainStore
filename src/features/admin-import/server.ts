@@ -58,14 +58,13 @@ export function mapAdminImportRouteErrorToHttp(error: unknown): {
   message: string;
 } {
   if (!(error instanceof Error)) {
-    return { status: 500, message: 'Import request failed.' };
+    return { status: 500, message: 'Не удалось выполнить запрос импорта.' };
   }
 
   switch (error.message) {
     case 'file_required':
-      return { status: 400, message: 'Excel file is required.' };
+      return { status: 400, message: 'Нужно выбрать Excel-файл.' };
     default:
-      return { status: 500, message: 'Import request failed.' };
+      return { status: 500, message: 'Не удалось выполнить запрос импорта.' };
   }
 }
-

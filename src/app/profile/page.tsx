@@ -134,7 +134,7 @@ export default async function ProfilePage() {
       ) : null}
 
       <section className={classNames(styles.panel, styles.profileHero)}>
-        <p className={styles.profileEyebrow}>MainStore account</p>
+        <p className={styles.profileEyebrow}>Профиль MainStore</p>
         <h2 className={styles.panelTitle}>{displayName}</h2>
         <p className={styles.panelText}>
           {username}

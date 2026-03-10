@@ -16,7 +16,7 @@ function mapSandboxError(error: string | undefined, unauthorizedMessage: string)
     case 'order_not_found':
       return 'Заказ не найден.';
     case 'not_configured':
-      return 'Платёжный sandbox временно недоступен.';
+      return 'Тестовый платёжный сценарий временно недоступен.';
     default:
       return 'Не удалось обновить платёжный статус. Попробуйте ещё раз.';
   }

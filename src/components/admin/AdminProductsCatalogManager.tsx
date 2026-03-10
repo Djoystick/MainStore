@@ -138,7 +138,7 @@ export function AdminProductsCatalogManager({ products, categories }: { products
           <p className={styles.adminCalloutTitle}>Операционный фокус</p>
           <p className={styles.adminCalloutText}>
             Быстрые фильтры подходят для ежедневной работы. Массовые обновления цен, остатков и
-            контента безопаснее проводить через Excel import с preview-first проверкой.
+            контента безопаснее проводить через импорт Excel с обязательным предпросмотром.
           </p>
         </div>
 

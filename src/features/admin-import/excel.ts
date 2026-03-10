@@ -125,22 +125,21 @@ export function parseExcelFile(args: {
 
 export function mapParseErrorToMessage(error: unknown): string {
   if (!(error instanceof Error)) {
-    return 'Could not parse this Excel file.';
+    return 'Не удалось прочитать этот Excel-файл.';
   }
 
   switch (error.message) {
     case 'unsupported_file_type':
-      return 'Unsupported file type. Use XLSX, XLS, XLSM, or XLTX.';
+      return 'Неподдерживаемый тип файла. Используйте XLSX, XLS, XLSM или XLTX.';
     case 'file_too_large':
-      return `File is too large. Maximum allowed size is ${Math.floor(maxImportFileSizeBytes / (1024 * 1024))} MB.`;
+      return `Файл слишком большой. Максимальный размер: ${Math.floor(maxImportFileSizeBytes / (1024 * 1024))} MB.`;
     case 'sheet_not_found':
-      return 'No readable worksheet found in this file.';
+      return 'В файле не найден читаемый лист.';
     case 'sheet_empty':
-      return 'Worksheet is empty.';
+      return 'Лист пустой.';
     case 'header_not_found':
-      return 'Could not detect a valid header row.';
+      return 'Не удалось определить корректную строку заголовков.';
     default:
-      return 'Could not parse this Excel file.';
+      return 'Не удалось прочитать этот Excel-файл.';
   }
 }
-

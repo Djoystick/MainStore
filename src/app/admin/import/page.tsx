@@ -9,10 +9,10 @@ export default function AdminImportPage() {
   return (
     <AdminScreen title="Импорт каталога" subtitle="Массовое обновление товаров через Excel">
       <section className={adminStyles.adminPageLead}>
-        <h2 className={adminStyles.adminPageLeadTitle}>Preview-first импорт без слепой записи в базу</h2>
+        <h2 className={adminStyles.adminPageLeadTitle}>Импорт с предпросмотром без слепой записи в базу</h2>
         <p className={adminStyles.adminPageLeadText}>
-          Используйте import для больших обновлений каталога, а точечные правки оставляйте для
-          product workspace. Форматы `XLSX`, `XLS`, `XLSM`, `XLTX` сохраняются без изменений.
+          Используйте импорт для больших обновлений каталога, а точечные правки оставляйте для
+          рабочей карточки товара. Форматы `XLSX`, `XLS`, `XLSM`, `XLTX` сохраняются без изменений.
         </p>
         <div className={adminStyles.adminActionBar}>
           <Link href="/admin/products" className={adminStyles.adminActionLink}>
@@ -25,7 +25,7 @@ export default function AdminImportPage() {
         <AdminCatalogImportFlow />
       </StoreSection>
 
-      <StoreSection title="Когда использовать import">
+      <StoreSection title="Когда использовать импорт">
         <section className={adminStyles.adminCard}>
           <div className={adminStyles.adminSummaryGrid}>
             <div className={adminStyles.adminSummaryCard}>
@@ -37,9 +37,9 @@ export default function AdminImportPage() {
             </div>
             <div className={adminStyles.adminSummaryCard}>
               <p className={adminStyles.adminSummaryLabel}>Не заменяет</p>
-              <p className={adminStyles.adminSummaryValue}>Ручной workspace</p>
+              <p className={adminStyles.adminSummaryValue}>Ручное редактирование</p>
               <p className={adminStyles.adminSummaryText}>
-                Для точечной публикации, проверки карточки и оперативных правок удобнее product UI.
+                Для точечной публикации, проверки карточки и быстрых правок удобнее интерфейс товара.
               </p>
             </div>
           </div>

@@ -11,7 +11,7 @@ export default async function AdminCollectionsPage() {
   const collectionsResult = await getAdminCollections();
 
   return (
-    <AdminScreen title="Подборки" subtitle="Контентные и merchandising-группы витрины" back={true}>
+    <AdminScreen title="Подборки" subtitle="Контентные и витринные группы" back={true}>
       {collectionsResult.message && (
         <section
           className={classNames(

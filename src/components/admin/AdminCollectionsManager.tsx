@@ -397,7 +397,7 @@ export function AdminCollectionsManager({ collections }: AdminCollectionsManager
           <div>
             <h2 className={styles.adminCardTitle}>Подборки</h2>
             <p className={styles.adminCardSub}>
-              Используйте подборки как merchandising-слой для home, витрины и тематических входов.
+              Используйте подборки как витринный слой для главной, каталога и тематических входов.
             </p>
           </div>
           <div className={styles.adminBadgeRow}>
@@ -472,10 +472,10 @@ export function AdminCollectionsManager({ collections }: AdminCollectionsManager
         </div>
 
         <div className={styles.adminCallout}>
-          <p className={styles.adminCalloutTitle}>Storefront integration</p>
+          <p className={styles.adminCalloutTitle}>Связь с витриной</p>
           <p className={styles.adminCalloutText}>
-            Подборки уже связаны с home mini-shelves и merchandising-секциями. Скрывайте или
-            перемещайте их здесь, если нужно быстро изменить витринные акценты без CMS.
+            Подборки уже связаны с мини-полками на главной и витринными секциями. Скрывайте или
+            перемещайте их здесь, если нужно быстро поменять акценты без отдельной контентной системы.
           </p>
         </div>
       </section>
@@ -565,7 +565,7 @@ export function AdminCollectionsManager({ collections }: AdminCollectionsManager
           title={collections.length === 0 ? 'Подборок пока нет' : 'Совпадений не найдено'}
           description={
             collections.length === 0
-              ? 'Создайте первую подборку для home, контентных блоков и merchandising-сценариев.'
+              ? 'Создайте первую подборку для главной, контентных блоков и витринных сценариев.'
               : 'Измените фильтры или поисковый запрос.'
           }
         />

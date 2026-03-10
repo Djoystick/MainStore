@@ -41,7 +41,7 @@ export default async function AdminPage() {
           <section className={adminStyles.adminPageLead}>
             <h2 className={adminStyles.adminPageLeadTitle}>Что важно сейчас</h2>
             <p className={adminStyles.adminPageLeadText}>
-              Держите под контролем оплату, публикацию каталога и активные merchandising-блоки из
+              Держите под контролем оплату, публикацию каталога и активные витринные блоки из
               одного рабочего пространства.
             </p>
             <div className={adminStyles.adminActionBar}>
@@ -119,7 +119,7 @@ export default async function AdminPage() {
               <Link href="/admin/collections" className={adminStyles.adminLinkCard}>
                 <p className={adminStyles.adminLinkTitle}>Подборки</p>
                 <p className={adminStyles.adminLinkText}>
-                  Контентные и merchandising-группы для home, витрины и акцентов.
+                  Контентные и витринные группы для главной, каталога и акцентов.
                 </p>
               </Link>
               <Link href="/admin/discounts" className={adminStyles.adminLinkCard}>
@@ -135,9 +135,9 @@ export default async function AdminPage() {
                 </p>
               </Link>
               <Link href="/admin/import" className={adminStyles.adminLinkCard}>
-                <p className={adminStyles.adminLinkTitle}>Импорт Excel</p>
+                <p className={adminStyles.adminLinkTitle}>Импорт из Excel</p>
                 <p className={adminStyles.adminLinkText}>
-                  Массовое обновление каталога с preview-first validation для XLSX, XLS, XLSM и
+                  Массовое обновление каталога с предпросмотром и проверкой для XLSX, XLS, XLSM и
                   XLTX.
                 </p>
               </Link>

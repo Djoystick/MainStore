@@ -100,7 +100,7 @@ async function ensureTaxonomy(
                 slug: currentSlug,
                 title: label.slice(0, 160),
                 is_active: true,
-                description: 'Created during Excel import.',
+                description: 'Создано во время импорта Excel.',
               } as never)
           : await client
               .from('collections')
@@ -108,7 +108,7 @@ async function ensureTaxonomy(
                 slug: currentSlug,
                 title: label.slice(0, 160),
                 is_active: true,
-                description: 'Created during Excel import.',
+                description: 'Создано во время импорта Excel.',
               } as never);
 
       if (!insertResult.error) {
@@ -414,7 +414,7 @@ export async function executeValidatedImport(
         message:
           error instanceof Error
             ? error.message
-            : 'Unexpected error while importing this row.',
+            : 'Непредвиденная ошибка при импорте этой строки.',
       });
     }
   }

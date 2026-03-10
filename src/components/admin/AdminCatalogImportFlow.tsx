@@ -41,8 +41,8 @@ const fieldLabels: Record<ImportFieldKey, string> = {
 
 const fieldHints: Partial<Record<ImportFieldKey, string>> = {
   status: 'Допустимо: draft, active, archived',
-  is_featured: 'true/false, yes/no, 1/0',
-  image_is_primary: 'true/false, yes/no, 1/0',
+  is_featured: 'Значения: true/false, yes/no, 1/0',
+  image_is_primary: 'Значения: true/false, yes/no, 1/0',
   category: 'Использует существующую категорию или создает новую',
   collection: 'Можно указывать несколько значений через запятую',
 };

@@ -304,7 +304,7 @@ export default async function AdminOrderDetailPage({
           <section className={adminStyles.adminCard}>
             <h2 className={adminStyles.adminCardTitle}>Платежные попытки</h2>
             <p className={adminStyles.adminCardSub}>
-              История нужна для операционной проверки и безопасного retry flow.
+              История нужна для операционной проверки и безопасного сценария повторной оплаты.
             </p>
             {order.paymentAttempts.length === 0 ? (
               <p className={adminStyles.adminMutedText}>Попыток оплаты пока нет.</p>

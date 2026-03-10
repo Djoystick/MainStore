@@ -42,14 +42,14 @@ export default async function AdminProductsPage() {
         <h2 className={adminStyles.adminPageLeadTitle}>Управление карточками без лишних переходов</h2>
         <p className={adminStyles.adminPageLeadText}>
           Ищите товары, проверяйте публикацию, остатки и скидки, а массовые обновления оставляйте
-          для Excel import.
+          для импорта Excel.
         </p>
         <div className={adminStyles.adminActionBar}>
           <Link href="/admin/products/new" className={adminStyles.adminPrimaryLink}>
             Создать товар
           </Link>
           <Link href="/admin/import" className={adminStyles.adminActionLink}>
-            Открыть import
+            Открыть импорт
           </Link>
           <Link href="/admin/discounts" className={adminStyles.adminActionLink}>
             Проверить скидки
@@ -60,7 +60,7 @@ export default async function AdminProductsPage() {
       {productsResult.products.length === 0 ? (
         <StoreEmptyState
           title="Товаров пока нет"
-          description="Создайте первый товар вручную или загрузите каталог через Excel import."
+          description="Создайте первый товар вручную или загрузите каталог через импорт Excel."
           actionLabel="Создать товар"
           actionHref="/admin/products/new"
         />

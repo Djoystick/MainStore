@@ -98,9 +98,9 @@ export function validateImportRows(args: {
 
     const slug = slugify(slugRaw);
     if (!slug) {
-      addError(errors, row.rowNumber, 'slug', 'Slug is required.');
+      addError(errors, row.rowNumber, 'slug', 'Укажите slug.');
     } else if (!slugPattern.test(slug)) {
-      addError(errors, row.rowNumber, 'slug', 'Slug format is invalid.');
+      addError(errors, row.rowNumber, 'slug', 'Slug имеет некорректный формат.');
     } else {
       const duplicateRow = slugRowIndex.get(slug);
       if (duplicateRow !== undefined) {
@@ -108,7 +108,7 @@ export function validateImportRows(args: {
           errors,
           row.rowNumber,
           'slug',
-          `Duplicate slug in file. Already used in row ${duplicateRow}.`,
+          `Такой slug уже есть в файле. Он уже используется в строке ${duplicateRow}.`,
         );
       } else {
         slugRowIndex.set(slug, row.rowNumber);
@@ -116,12 +116,12 @@ export function validateImportRows(args: {
     }
 
     if (!titleRaw) {
-      addError(errors, row.rowNumber, 'title', 'Title is required.');
+      addError(errors, row.rowNumber, 'title', 'Укажите название товара.');
     }
 
     const price = parseNumberLike(priceRaw);
     if (price === null || price < 0) {
-      addError(errors, row.rowNumber, 'price', 'Price must be a non-negative number.');
+      addError(errors, row.rowNumber, 'price', 'Цена должна быть неотрицательным числом.');
     }
 
     const compareAtPrice =
@@ -131,7 +131,7 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'compare_at_price',
-        'Compare-at price must be a non-negative number.',
+        'Старая цена должна быть неотрицательным числом.',
       );
     }
     if (price !== null && compareAtPrice !== null && compareAtPrice < price) {
@@ -139,13 +139,13 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'compare_at_price',
-        'Compare-at price cannot be less than price.',
+        'Старая цена не может быть меньше текущей.',
       );
     }
 
     const currency = (currencyRaw || 'USD').toUpperCase();
     if (!/^[A-Z]{3}$/.test(currency)) {
-      addError(errors, row.rowNumber, 'currency', 'Currency must be a 3-letter code.');
+      addError(errors, row.rowNumber, 'currency', 'Валюта должна быть трёхбуквенным кодом.');
     }
 
     const status = (statusRaw || 'draft') as ProductStatus;
@@ -154,7 +154,7 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'status',
-        'Status must be one of: draft, active, archived.',
+        'Статус должен быть одним из: draft, active, archived.',
       );
     }
 
@@ -164,7 +164,7 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'is_featured',
-        'is_featured should be true/false, yes/no, or 1/0.',
+        'Для is_featured используйте true/false, yes/no или 1/0.',
       );
     }
 
@@ -179,7 +179,7 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'stock_quantity',
-        'Stock quantity must be a non-negative integer.',
+        'Остаток должен быть неотрицательным целым числом.',
       );
     }
 
@@ -187,10 +187,10 @@ export function validateImportRows(args: {
       try {
         const parsed = new URL(imageUrlRaw);
         if (!['http:', 'https:'].includes(parsed.protocol)) {
-          addError(errors, row.rowNumber, 'image_url', 'Image URL must use http or https.');
+          addError(errors, row.rowNumber, 'image_url', 'URL изображения должен использовать http или https.');
         }
       } catch {
-        addError(errors, row.rowNumber, 'image_url', 'Image URL is invalid.');
+        addError(errors, row.rowNumber, 'image_url', 'URL изображения некорректен.');
       }
     }
 
@@ -205,7 +205,7 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'image_sort_order',
-        'Image sort order must be a non-negative integer.',
+        'Порядок изображения должен быть неотрицательным целым числом.',
       );
     }
 
@@ -215,7 +215,7 @@ export function validateImportRows(args: {
         errors,
         row.rowNumber,
         'image_is_primary',
-        'image_is_primary should be true/false, yes/no, or 1/0.',
+        'Для image_is_primary используйте true/false, yes/no или 1/0.',
       );
     }
 
@@ -259,4 +259,3 @@ export function validateImportRows(args: {
     validRows,
   };
 }
-

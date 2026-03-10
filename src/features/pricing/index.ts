@@ -96,18 +96,18 @@ function buildDiscountBadge(
   currency: string,
 ): string {
   if (candidate.type === 'percentage') {
-    return `${Math.round(candidate.value)}% off`;
+    return `-${Math.round(candidate.value)}%`;
   }
 
   if (savingsPercent >= 1) {
-    return `${Math.round(savingsPercent)}% off`;
+    return `-${Math.round(savingsPercent)}%`;
   }
 
-  return new Intl.NumberFormat('en-US', {
+  return `-${new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency || 'USD',
     minimumFractionDigits: 0,
-  }).format(savingsAmount) + ' off';
+  }).format(savingsAmount)}`;
 }
 
 export function resolvePriceSummary(
@@ -193,7 +193,7 @@ function mapDiscountRows(
     id: row.id,
     scope: row.scope,
     targetId: row.target_id,
-    targetTitle: titlesByTargetId.get(row.target_id) ?? 'Unknown target',
+    targetTitle: titlesByTargetId.get(row.target_id) ?? 'Неизвестная цель',
     title: row.title,
     type: row.type,
     value: Number(row.value) || 0,

@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof Error) {
       const parseMessage = mapParseErrorToMessage(error);
-      if (parseMessage !== 'Could not parse this Excel file.') {
+      if (parseMessage !== 'Не удалось прочитать этот Excel-файл.') {
         const status = error.message === 'file_too_large' ? 413 : 400;
         return NextResponse.json({ ok: false, error: parseMessage }, { status });
       }
@@ -117,4 +117,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: mapped.message }, { status: mapped.status });
   }
 }
-

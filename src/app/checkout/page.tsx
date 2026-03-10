@@ -141,8 +141,9 @@ export default async function CheckoutPage() {
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Как пройдёт оформление</h2>
             <p className={styles.panelText}>
-              Сначала вы подтверждаете данные доставки, затем создаётся заказ и открывается sandbox payment flow.
-              Payment status и order status сохраняются отдельно и дальше отображаются в заказе.
+              Сначала вы подтверждаете данные доставки, затем создаётся заказ и открывается тестовый
+              платёжный шаг. Статус оплаты и статус заказа сохраняются отдельно и дальше отображаются
+              в заказе.
             </p>
           </section>
 

@@ -103,9 +103,9 @@ export default async function SandboxPaymentPage({
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Что происходит</h2>
             <p className={styles.panelText}>
-              Это sandbox-провайдер для первого платёжного прохода. Он имитирует hosted checkout,
-              но использует уже реальную order/payment архитектуру: попытки оплаты, payment status,
-              retry и server-side обновление заказа.
+              Это тестовый провайдер для первого платёжного прохода. Он имитирует страницу оплаты,
+              но использует уже реальную архитектуру заказа и оплаты: попытки оплаты, статусы,
+              повторный запуск и серверное обновление заказа.
             </p>
           </section>
 

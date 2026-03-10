@@ -21,7 +21,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         reason: 'bootstrap_not_configured',
-        error: 'Server session bootstrap is not configured.',
+        error: 'Серверная сессия Telegram не настроена.',
         details: [
           getTelegramVerificationMissingEnvMessage(),
           getSessionFeatureMissingEnvMessage(),
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     body = (await request.json()) as BootstrapBody;
   } catch {
     return NextResponse.json(
-      { ok: false, reason: 'invalid_request_body', error: 'Invalid request body.' },
+      { ok: false, reason: 'invalid_request_body', error: 'Некорректное тело запроса.' },
       { status: 400 },
     );
   }
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const initDataRaw = body.initDataRaw;
   if (!initDataRaw) {
     return NextResponse.json(
-      { ok: false, reason: 'init_data_missing', error: 'initDataRaw is required.' },
+      { ok: false, reason: 'init_data_missing', error: 'Нужно передать initDataRaw.' },
       { status: 400 },
     );
   }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         reason: verification.reason,
-        error: `Telegram init data verification failed: ${verification.reason}`,
+        error: `Не удалось проверить Telegram init data: ${verification.reason}`,
       },
       { status: 401 },
     );
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
       {
         ok: false,
         reason: upsertResult.reason,
-        error: `Profile upsert failed: ${upsertResult.reason}`,
+        error: `Не удалось сохранить профиль: ${upsertResult.reason}`,
         details,
       },
       { status: statusCode },
