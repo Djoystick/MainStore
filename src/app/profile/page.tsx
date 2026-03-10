@@ -16,7 +16,7 @@ function formatOrderStatus(status: string): string {
     case 'pending':
       return 'Ожидает';
     case 'confirmed':
-      return 'Подтвержден';
+      return 'Подтверждён';
     case 'processing':
       return 'В обработке';
     case 'shipped':
@@ -24,10 +24,60 @@ function formatOrderStatus(status: string): string {
     case 'delivered':
       return 'Доставлен';
     case 'cancelled':
-      return 'Отменен';
+      return 'Отменён';
     default:
       return status;
   }
+}
+
+function getNextAction(input: {
+  cartQuantityTotal: number;
+  favoritesCount: number;
+  actionRequiredOrders: number;
+  inProgressOrders: number;
+}): { title: string; text: string; href: string; label: string } {
+  if (input.actionRequiredOrders > 0) {
+    return {
+      title: 'Есть заказы, которые ждут действия',
+      text: 'Откройте историю заказов и проверьте оплату или текущий статус.',
+      href: '/orders',
+      label: 'К заказам',
+    };
+  }
+
+  if (input.cartQuantityTotal > 0) {
+    return {
+      title: 'Можно вернуться к оформлению',
+      text: 'В корзине уже есть товары. Проверьте состав и продолжите заказ, когда будете готовы.',
+      href: '/cart',
+      label: 'Открыть корзину',
+    };
+  }
+
+  if (input.favoritesCount > 0) {
+    return {
+      title: 'В избранном есть сохранённые товары',
+      text: 'Посмотрите сохранённые позиции и верните их в покупку, когда захотите.',
+      href: '/favorites',
+      label: 'Открыть избранное',
+    };
+  }
+
+  if (input.inProgressOrders > 0) {
+    return {
+      title: 'Следите за текущими заказами',
+      text: 'Статусы и детали доставки обновляются прямо в вашем личном разделе.',
+      href: '/orders',
+      label: 'Смотреть заказы',
+    };
+  }
+
+  return {
+    title: 'Можно продолжить покупки',
+    text: 'Каталог, подборки и карточки товаров уже готовы. Выберите следующую позицию без лишних шагов.',
+    href: '/catalog',
+    label: 'Перейти в каталог',
+  };
 }
 
 export default async function ProfilePage() {
@@ -37,95 +87,121 @@ export default async function ProfilePage() {
     getOrdersForProfile(profile?.id ?? null),
   ]);
   const latestOrder = ordersData.orders[0] ?? null;
-  const displayName = profile?.displayName || profile?.username || 'Пользователь Telegram';
-  const username = profile?.username ? `@${profile.username}` : 'Без username';
+  const nextAction = getNextAction({
+    cartQuantityTotal: summary.cartQuantityTotal,
+    favoritesCount: summary.favoritesCount,
+    actionRequiredOrders: ordersData.actionRequiredOrders,
+    inProgressOrders: ordersData.inProgressOrders,
+  });
 
-  return (
-    <StoreScreen title="Профиль" subtitle="Аккаунт, история и быстрые действия">
-      {profile ? (
-        <>
-          {ordersData.message && (
-            <section
-              className={classNames(
-                styles.dataNotice,
-                ordersData.status === 'error' && styles.dataNoticeError,
-              )}
-            >
-              <p className={styles.dataNoticeTitle}>Обновление профиля</p>
-              <p className={styles.dataNoticeText}>{ordersData.message}</p>
-              {(ordersData.status === 'error' ||
-                ordersData.status === 'not_configured') && (
-                <div className={styles.dataNoticeActions}>
-                  <Link
-                    href="/profile"
-                    className={styles.dataNoticeRetry}
-                    aria-label="Повторить загрузку профиля"
-                  >
-                    Повторить
-                  </Link>
-                </div>
-              )}
-            </section>
-          )}
-
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>{displayName}</h2>
-            <p className={styles.panelText}>
-              {username}
-              <br />
-              Роль: {profile.role}
-            </p>
-          </section>
-
-          <StoreSection title="Активность">
-            <div className={styles.infoGrid}>
-              <div className={styles.infoItem}>
-                <p className={styles.infoLabel}>Избранное</p>
-                <p className={styles.infoValue}>{summary.favoritesCount}</p>
-              </div>
-              <div className={styles.infoItem}>
-                <p className={styles.infoLabel}>Товаров в корзине</p>
-                <p className={styles.infoValue}>{summary.cartQuantityTotal}</p>
-              </div>
-              <div className={styles.infoItem}>
-                <p className={styles.infoLabel}>Заказы</p>
-                <p className={styles.infoValue}>{ordersData.totalOrders}</p>
-              </div>
-            </div>
-          </StoreSection>
-
-          {latestOrder && (
-            <StoreSection title="Последний заказ">
-              <Link
-                href={`/orders/${latestOrder.id}`}
-                className={styles.orderCard}
-                aria-label="Открыть последний заказ"
-              >
-                <div className={styles.orderCardHeader}>
-                  <p className={styles.orderCardId}>
-                    Заказ #{latestOrder.id.slice(0, 8).toUpperCase()}
-                  </p>
-                  <span className={styles.orderStatusBadge}>
-                    {formatOrderStatus(latestOrder.status)}
-                  </span>
-                </div>
-                <p className={styles.orderMetaItem}>
-                  {formatStorePrice(latestOrder.totalCents, latestOrder.currency)}
-                </p>
-                <p className={styles.orderMetaItem}>
-                  Оплата: {formatPaymentStatus(latestOrder.paymentStatus)}
-                </p>
-              </Link>
-            </StoreSection>
-          )}
-        </>
-      ) : (
+  if (!profile) {
+    return (
+      <StoreScreen title="Профиль" subtitle="Аккаунт, история и быстрые действия">
         <StoreEmptyState
           title="Нет активной сессии"
-          description="Откройте MainStore в Telegram, чтобы загрузить профиль, избранное и корзину."
+          description="Откройте MainStore в Telegram, чтобы загрузить профиль, избранное, корзину и заказы."
           actionLabel="Открыть каталог"
           actionHref="/catalog"
         />
+      </StoreScreen>
+    );
+  }
+
+  const displayName = profile.displayName || profile.username || 'Пользователь Telegram';
+  const username = profile.username ? `@${profile.username}` : 'username не указан';
+
+  return (
+    <StoreScreen title="Профиль" subtitle="Личное пространство для заказов, избранного и корзины">
+      {ordersData.message ? (
+        <section
+          className={classNames(
+            styles.dataNotice,
+            ordersData.status === 'error' && styles.dataNoticeError,
+          )}
+        >
+          <p className={styles.dataNoticeTitle}>Обновление профиля</p>
+          <p className={styles.dataNoticeText}>{ordersData.message}</p>
+          {(ordersData.status === 'error' || ordersData.status === 'not_configured') ? (
+            <div className={styles.dataNoticeActions}>
+              <Link href="/profile" className={styles.dataNoticeRetry} aria-label="Повторить загрузку профиля">
+                Повторить
+              </Link>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
+      <section className={classNames(styles.panel, styles.profileHero)}>
+        <p className={styles.profileEyebrow}>MainStore account</p>
+        <h2 className={styles.panelTitle}>{displayName}</h2>
+        <p className={styles.panelText}>
+          {username}
+          <br />
+          Личный раздел для покупок, истории заказов и сохранённых товаров.
+        </p>
+        <div className={styles.profileHeroMeta}>
+          <span className={styles.profileMetaBadge}>Роль: {profile.role}</span>
+          <span className={styles.profileMetaBadge}>Заказов: {ordersData.totalOrders}</span>
+          <span className={styles.profileMetaBadge}>В корзине: {summary.cartQuantityTotal}</span>
+        </div>
+      </section>
+
+      <StoreSection title="Что сейчас важно">
+        <div className={styles.actionList}>
+          <Link href={nextAction.href} className={styles.actionItem} aria-label={nextAction.label}>
+            <div>
+              <p className={styles.actionItemTitle}>{nextAction.title}</p>
+              <p className={styles.actionItemSub}>{nextAction.text}</p>
+            </div>
+            <span className={styles.actionItemIcon}>--&gt;</span>
+          </Link>
+        </div>
+      </StoreSection>
+
+      <StoreSection title="Активность">
+        <div className={styles.infoGrid}>
+          <div className={styles.infoItem}>
+            <p className={styles.infoLabel}>Избранное</p>
+            <p className={styles.infoValue}>{summary.favoritesCount}</p>
+          </div>
+          <div className={styles.infoItem}>
+            <p className={styles.infoLabel}>Товаров в корзине</p>
+            <p className={styles.infoValue}>{summary.cartQuantityTotal}</p>
+          </div>
+          <div className={styles.infoItem}>
+            <p className={styles.infoLabel}>Заказы в работе</p>
+            <p className={styles.infoValue}>{ordersData.inProgressOrders}</p>
+          </div>
+          <div className={styles.infoItem}>
+            <p className={styles.infoLabel}>Требуют действия</p>
+            <p className={styles.infoValue}>{ordersData.actionRequiredOrders}</p>
+          </div>
+        </div>
+      </StoreSection>
+
+      {latestOrder ? (
+        <StoreSection title="Последний заказ">
+          <Link href={`/orders/${latestOrder.id}`} className={styles.orderCard} aria-label="Открыть последний заказ">
+            <div className={styles.orderCardHeader}>
+              <p className={styles.orderCardId}>Заказ #{latestOrder.id.slice(0, 8).toUpperCase()}</p>
+              <p className={styles.orderMetaItem}>{formatStorePrice(latestOrder.totalCents, latestOrder.currency)}</p>
+            </div>
+            <div className={styles.paymentBadgeRow}>
+              <span className={styles.orderStatusBadge}>{formatOrderStatus(latestOrder.status)}</span>
+              <span className={styles.paymentStatusBadge}>{formatPaymentStatus(latestOrder.paymentStatus)}</span>
+            </div>
+            <p className={styles.orderCardHint}>
+              {latestOrder.canRetryPayment ? 'Ожидает оплаты или подтверждения платежа' : 'Открыть детали заказа'}
+            </p>
+          </Link>
+        </StoreSection>
+      ) : (
+        <section className={styles.panel}>
+          <h2 className={styles.panelTitle}>История заказов ещё пустая</h2>
+          <p className={styles.panelText}>
+            Когда появится первый заказ, здесь будет удобно вернуться к оплате, доставке и деталям покупки.
+          </p>
+        </section>
       )}
 
       <StoreSection title="Быстрые переходы">
@@ -133,7 +209,7 @@ export default async function ProfilePage() {
           <Link href="/orders" className={styles.actionItem} aria-label="Открыть мои заказы">
             <div>
               <p className={styles.actionItemTitle}>Мои заказы</p>
-              <p className={styles.actionItemSub}>Статусы и история покупок</p>
+              <p className={styles.actionItemSub}>Статусы, оплата и история покупок</p>
             </div>
             <span className={styles.actionItemIcon}>--&gt;</span>
           </Link>
@@ -141,7 +217,7 @@ export default async function ProfilePage() {
           <Link href="/favorites" className={styles.actionItem} aria-label="Открыть избранное">
             <div>
               <p className={styles.actionItemTitle}>Избранное</p>
-              <p className={styles.actionItemSub}>Сохраненные товары в одном месте</p>
+              <p className={styles.actionItemSub}>Сохранённые товары для быстрого возврата</p>
             </div>
             <span className={styles.actionItemIcon}>--&gt;</span>
           </Link>
@@ -149,7 +225,7 @@ export default async function ProfilePage() {
           <Link href="/cart" className={styles.actionItem} aria-label="Открыть корзину">
             <div>
               <p className={styles.actionItemTitle}>Корзина</p>
-              <p className={styles.actionItemSub}>Проверьте товары перед оформлением</p>
+              <p className={styles.actionItemSub}>Проверьте состав заказа и переходите к оформлению</p>
             </div>
             <span className={styles.actionItemIcon}>--&gt;</span>
           </Link>

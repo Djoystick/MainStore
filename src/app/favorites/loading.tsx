@@ -4,7 +4,7 @@ export default function FavoritesLoading() {
   return (
     <StoreLoadingView
       title="Избранное"
-      subtitle="Загружаем избранное"
+      subtitle="Собираем сохранённые товары"
       back={false}
       showBottomNav={true}
       mode="catalog"

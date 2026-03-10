@@ -4,7 +4,7 @@ export default function CartLoading() {
   return (
     <StoreLoadingView
       title="Корзина"
-      subtitle="Загружаем корзину"
+      subtitle="Обновляем ваш текущий заказ"
       back={false}
       showBottomNav={true}
       mode="cart"

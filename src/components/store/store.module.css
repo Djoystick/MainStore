@@ -1062,6 +1062,43 @@
   color: var(--store-hint);
 }
 
+.profileHero {
+  background:
+    radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.7), transparent 28%),
+    linear-gradient(145deg, rgba(255, 245, 234, 0.96), rgba(236, 244, 255, 0.94));
+  border-color: rgba(207, 177, 157, 0.32);
+}
+
+.profileEyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8f5d52;
+}
+
+.profileHeroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.profileMetaBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(31, 49, 84, 0.08);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 700;
+  color: #5d6170;
+}
+
 .checkoutForm {
   display: flex;
   flex-direction: column;

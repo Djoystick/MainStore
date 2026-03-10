@@ -4,7 +4,7 @@ export default function ProfileLoading() {
   return (
     <StoreLoadingView
       title="Профиль"
-      subtitle="Загружаем профиль"
+      subtitle="Готовим личное пространство"
       back={false}
       showBottomNav={true}
       mode="orders"
