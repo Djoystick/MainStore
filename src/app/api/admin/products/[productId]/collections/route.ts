@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
-  deleteAdminCategory,
+  deleteAdminProductCollection,
   getAdminRequestAccess,
-  updateAdminCategory,
-  type CategoryUpsertInput,
+  upsertAdminProductCollection,
 } from '@/features/admin';
 import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
@@ -12,23 +11,31 @@ function getAccessStatusCode(reason: string): number {
   return reason === 'no_session' ? 401 : 403;
 }
 
-function isCategoryPayload(value: unknown): value is CategoryUpsertInput {
+function isProductCollectionPayload(
+  value: unknown,
+): value is { collectionId: string; sortOrder: number } {
   if (!value || typeof value !== 'object') {
     return false;
   }
 
   const record = value as Record<string, unknown>;
-  return (
-    typeof record.title === 'string' &&
-    typeof record.slug === 'string' &&
-    typeof record.isActive === 'boolean' &&
-    typeof record.sortOrder === 'number'
-  );
+  return typeof record.collectionId === 'string' && typeof record.sortOrder === 'number';
 }
 
-export async function PATCH(
+function isProductCollectionDeletePayload(
+  value: unknown,
+): value is { collectionId: string } {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return typeof record.collectionId === 'string';
+}
+
+export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ productId: string }> },
 ) {
   const access = await getAdminRequestAccess(request);
   if (!access.ok) {
@@ -38,10 +45,10 @@ export async function PATCH(
     );
   }
 
-  const { categoryId } = await params;
-  if (!categoryId) {
+  const { productId } = await params;
+  if (!productId) {
     return NextResponse.json(
-      { ok: false, error: 'category_id_required' },
+      { ok: false, error: 'product_id_required' },
       { status: 400 },
     );
   }
@@ -56,20 +63,24 @@ export async function PATCH(
     );
   }
 
-  if (!isCategoryPayload(payload)) {
+  if (!isProductCollectionPayload(payload)) {
     return NextResponse.json(
-      { ok: false, error: 'invalid_category_payload' },
+      { ok: false, error: 'invalid_product_collection_payload' },
       { status: 400 },
     );
   }
 
-  const result = await updateAdminCategory(categoryId, payload);
+  const result = await upsertAdminProductCollection(
+    productId,
+    payload.collectionId,
+    payload.sortOrder,
+  );
 
   if (!result.ok) {
     const status =
       result.error === 'not_configured'
         ? 503
-        : result.error === 'category_not_found'
+        : result.error === 'product_not_found' || result.error === 'collection_not_found'
           ? 404
           : 400;
     const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
@@ -84,7 +95,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ productId: string }> },
 ) {
   const access = await getAdminRequestAccess(request);
   if (!access.ok) {
@@ -94,22 +105,34 @@ export async function DELETE(
     );
   }
 
-  const { categoryId } = await params;
-  if (!categoryId) {
+  const { productId } = await params;
+  if (!productId) {
     return NextResponse.json(
-      { ok: false, error: 'category_id_required' },
+      { ok: false, error: 'product_id_required' },
       { status: 400 },
     );
   }
 
-  const result = await deleteAdminCategory(categoryId);
-  if (!result.ok || !result.data) {
-    const status =
-      result.error === 'not_configured'
-        ? 503
-        : result.error === 'category_not_found'
-          ? 404
-          : 400;
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return NextResponse.json(
+      { ok: false, error: 'invalid_request_body' },
+      { status: 400 },
+    );
+  }
+
+  if (!isProductCollectionDeletePayload(payload)) {
+    return NextResponse.json(
+      { ok: false, error: 'invalid_product_collection_payload' },
+      { status: 400 },
+    );
+  }
+
+  const result = await deleteAdminProductCollection(productId, payload.collectionId);
+  if (!result.ok) {
+    const status = result.error === 'not_configured' ? 503 : 400;
     const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
       { ok: false, error: result.error, details },
@@ -117,5 +140,5 @@ export async function DELETE(
     );
   }
 
-  return NextResponse.json({ ok: true, summary: result.data });
+  return NextResponse.json({ ok: true });
 }

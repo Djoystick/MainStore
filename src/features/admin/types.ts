@@ -7,7 +7,30 @@ export interface AdminCategoryOption {
   id: string;
   title: string;
   slug: string;
+  description: string | null;
+  shortText: string | null;
   isActive: boolean;
+  sortOrder: number;
+  productsCount: number;
+}
+
+export interface AdminCollectionOption {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  shortText: string | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
+  productsCount: number;
+}
+
+export interface AdminProductCollectionAssignment {
+  collectionId: string;
+  title: string;
+  slug: string;
+  sortOrder: number;
 }
 
 export interface AdminProductListItem {
@@ -41,6 +64,7 @@ export interface AdminProductDetail extends AdminProductListItem {
   description: string | null;
   images: AdminProductImageItem[];
   collectionTitles: string[];
+  collectionAssignments: AdminProductCollectionAssignment[];
   collectionsCount: number;
   imagesCount: number;
   favoritesCount: number;
@@ -119,4 +143,23 @@ export interface ProductImageUpsertInput {
   alt?: string | null;
   sortOrder: number;
   isPrimary: boolean;
+}
+
+export interface CategoryUpsertInput {
+  title: string;
+  slug: string;
+  description?: string | null;
+  shortText?: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface CollectionUpsertInput {
+  title: string;
+  slug: string;
+  description?: string | null;
+  shortText?: string | null;
+  isActive: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
 }

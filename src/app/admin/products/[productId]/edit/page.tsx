@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { AdminProductDangerZone } from '@/components/admin/AdminProductDangerZone';
 import { AdminProductDuplicateButton } from '@/components/admin/AdminProductDuplicateButton';
 import { AdminProductFeatureToggle } from '@/components/admin/AdminProductFeatureToggle';
+import { AdminProductCollectionsManager } from '@/components/admin/AdminProductCollectionsManager';
 import { AdminProductForm } from '@/components/admin/AdminProductForm';
 import { AdminProductImagesManager } from '@/components/admin/AdminProductImagesManager';
 import { AdminProductOverviewCard } from '@/components/admin/AdminProductOverviewCard';
@@ -88,6 +89,12 @@ export default async function AdminEditProductPage({
             mode="edit"
             product={detailResult.product}
             categories={detailResult.categories}
+          />
+
+          <AdminProductCollectionsManager
+            productId={detailResult.product.id}
+            collections={detailResult.collections}
+            assignments={detailResult.product.collectionAssignments}
           />
 
           <AdminProductImagesManager

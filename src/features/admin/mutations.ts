@@ -2,12 +2,21 @@ import 'server-only';
 
 import { createSupabaseAdminClientOptional } from '@/lib/supabase';
 import type { Database } from '@/types/db';
+import { buildTaxonomyMetadata } from '@/features/catalog-taxonomy/metadata';
 
-import type { OrderStatus, ProductImageUpsertInput, ProductStatus, ProductUpsertInput } from './types';
+import type {
+  CategoryUpsertInput,
+  CollectionUpsertInput,
+  OrderStatus,
+  ProductImageUpsertInput,
+  ProductStatus,
+  ProductUpsertInput,
+} from './types';
 
 type ProductRow = Database['public']['Tables']['products']['Row'];
 type ProductImageRow = Database['public']['Tables']['product_images']['Row'];
 type CategoryRow = Database['public']['Tables']['categories']['Row'];
+type CollectionRow = Database['public']['Tables']['collections']['Row'];
 type CollectionItemRow = Database['public']['Tables']['collection_items']['Row'];
 
 const PRODUCT_STATUS_VALUES: ProductStatus[] = ['draft', 'active', 'archived'];
@@ -58,11 +67,33 @@ function mapDatabaseError(error: string | null | undefined, fallback: string): s
     return fallback;
   }
 
-  if (error.includes('duplicate key value') && error.includes('products_slug_key')) {
+  if (error.includes('duplicate key value') && error.includes('_slug_key')) {
     return 'slug_conflict';
   }
 
   return error;
+}
+
+function validateTaxonomyInput(
+  input: CategoryUpsertInput | CollectionUpsertInput,
+  kind: 'category' | 'collection',
+): string | null {
+  const normalizedTitle = normalizeText(input.title, 160);
+  const normalizedSlug = normalizeText(input.slug, 120);
+
+  if (!normalizedTitle) {
+    return kind === 'category' ? 'category_title_required' : 'collection_title_required';
+  }
+
+  if (!isSlugValid(normalizedSlug)) {
+    return kind === 'category' ? 'invalid_category_slug' : 'invalid_collection_slug';
+  }
+
+  if (!Number.isInteger(input.sortOrder) || input.sortOrder < 0) {
+    return kind === 'category' ? 'invalid_category_sort_order' : 'invalid_collection_sort_order';
+  }
+
+  return null;
 }
 
 function validateProductInput(input: ProductUpsertInput): string | null {
@@ -174,6 +205,21 @@ async function ensureCategoryExists(categoryId: string | null): Promise<boolean>
     .from('categories')
     .select('id')
     .eq('id', categoryId)
+    .maybeSingle();
+
+  return !result.error && Boolean(result.data);
+}
+
+async function ensureCollectionExists(collectionId: string): Promise<boolean> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return false;
+  }
+
+  const result = await client
+    .from('collections')
+    .select('id')
+    .eq('id', collectionId)
     .maybeSingle();
 
   return !result.error && Boolean(result.data);
@@ -767,31 +813,30 @@ export async function updateAdminOrderStatus(
 }
 
 export async function createAdminCategory(
-  title: string,
-  slug: string,
-  isActive = true,
+  input: CategoryUpsertInput,
 ): Promise<MutationResult<{ id: string }>> {
   const client = createSupabaseAdminClientOptional();
   if (!client) {
     return { ok: false, error: 'not_configured' };
   }
 
-  const normalizedTitle = normalizeText(title, 160);
-  const normalizedSlug = normalizeText(slug, 120);
-  if (!normalizedTitle) {
-    return { ok: false, error: 'category_title_required' };
-  }
-  if (!isSlugValid(normalizedSlug)) {
-    return { ok: false, error: 'invalid_category_slug' };
+  const validationError = validateTaxonomyInput(input, 'category');
+  if (validationError) {
+    return { ok: false, error: validationError };
   }
 
   const result = await client
     .from('categories')
     .insert(
       {
-        title: normalizedTitle,
-        slug: normalizedSlug,
-        is_active: isActive,
+        title: normalizeText(input.title, 160),
+        slug: normalizeText(input.slug, 120),
+        description: normalizeText(input.description, 600) || null,
+        is_active: input.isActive,
+        metadata: buildTaxonomyMetadata({
+          shortText: input.shortText,
+          displayOrder: input.sortOrder,
+        }),
       } as never,
     )
     .select('id')
@@ -802,7 +847,10 @@ export async function createAdminCategory(
   };
 
   if (typedResult.error || !typedResult.data) {
-    return { ok: false, error: typedResult.error?.message || 'create_category_failed' };
+    return {
+      ok: false,
+      error: mapDatabaseError(typedResult.error?.message, 'create_category_failed'),
+    };
   }
 
   return {
@@ -813,31 +861,30 @@ export async function createAdminCategory(
 
 export async function updateAdminCategory(
   categoryId: string,
-  title: string,
-  slug: string,
-  isActive: boolean,
+  input: CategoryUpsertInput,
 ): Promise<MutationResult> {
   const client = createSupabaseAdminClientOptional();
   if (!client) {
     return { ok: false, error: 'not_configured' };
   }
 
-  const normalizedTitle = normalizeText(title, 160);
-  const normalizedSlug = normalizeText(slug, 120);
-  if (!normalizedTitle) {
-    return { ok: false, error: 'category_title_required' };
-  }
-  if (!isSlugValid(normalizedSlug)) {
-    return { ok: false, error: 'invalid_category_slug' };
+  const validationError = validateTaxonomyInput(input, 'category');
+  if (validationError) {
+    return { ok: false, error: validationError };
   }
 
   const result = await client
     .from('categories')
     .update(
       {
-        title: normalizedTitle,
-        slug: normalizedSlug,
-        is_active: isActive,
+        title: normalizeText(input.title, 160),
+        slug: normalizeText(input.slug, 120),
+        description: normalizeText(input.description, 600) || null,
+        is_active: input.isActive,
+        metadata: buildTaxonomyMetadata({
+          shortText: input.shortText,
+          displayOrder: input.sortOrder,
+        }),
       } as never,
     )
     .eq('id', categoryId)
@@ -849,7 +896,287 @@ export async function updateAdminCategory(
   };
 
   if (typedResult.error || !typedResult.data) {
-    return { ok: false, error: typedResult.error?.message || 'update_category_failed' };
+    return {
+      ok: false,
+      error: mapDatabaseError(typedResult.error?.message, 'category_not_found'),
+    };
+  }
+
+  return { ok: true };
+}
+
+export async function deleteAdminCategory(
+  categoryId: string,
+): Promise<MutationResult<{ detachedProductsCount: number }>> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const categoryResult = await client
+    .from('categories')
+    .select('id')
+    .eq('id', categoryId)
+    .maybeSingle();
+
+  if (categoryResult.error || !categoryResult.data) {
+    return { ok: false, error: 'category_not_found' };
+  }
+
+  const linkedProductsResult = await client
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('category_id', categoryId);
+
+  if (linkedProductsResult.error) {
+    return { ok: false, error: 'category_delete_precheck_failed' };
+  }
+
+  const detachProductsResult = await client
+    .from('products')
+    .update({ category_id: null } as never)
+    .eq('category_id', categoryId);
+
+  if (detachProductsResult.error) {
+    return { ok: false, error: detachProductsResult.error.message };
+  }
+
+  const deleteResult = await client
+    .from('categories')
+    .delete()
+    .eq('id', categoryId)
+    .select('id')
+    .maybeSingle();
+  const typedDeleteResult = deleteResult as {
+    data: Pick<CategoryRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedDeleteResult.error || !typedDeleteResult.data) {
+    return { ok: false, error: typedDeleteResult.error?.message || 'delete_category_failed' };
+  }
+
+  return {
+    ok: true,
+    data: {
+      detachedProductsCount: linkedProductsResult.count ?? 0,
+    },
+  };
+}
+
+export async function createAdminCollection(
+  input: CollectionUpsertInput,
+): Promise<MutationResult<{ id: string }>> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const validationError = validateTaxonomyInput(input, 'collection');
+  if (validationError) {
+    return { ok: false, error: validationError };
+  }
+
+  const result = await client
+    .from('collections')
+    .insert(
+      {
+        title: normalizeText(input.title, 160),
+        slug: normalizeText(input.slug, 120),
+        description: normalizeText(input.description, 600) || null,
+        is_active: input.isActive,
+        metadata: buildTaxonomyMetadata({
+          shortText: input.shortText,
+          displayOrder: input.sortOrder,
+          isFeatured: input.isFeatured,
+        }),
+      } as never,
+    )
+    .select('id')
+    .single();
+  const typedResult = result as {
+    data: Pick<CollectionRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedResult.error || !typedResult.data) {
+    return {
+      ok: false,
+      error: mapDatabaseError(typedResult.error?.message, 'create_collection_failed'),
+    };
+  }
+
+  return {
+    ok: true,
+    data: { id: typedResult.data.id },
+  };
+}
+
+export async function updateAdminCollection(
+  collectionId: string,
+  input: CollectionUpsertInput,
+): Promise<MutationResult> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const validationError = validateTaxonomyInput(input, 'collection');
+  if (validationError) {
+    return { ok: false, error: validationError };
+  }
+
+  const result = await client
+    .from('collections')
+    .update(
+      {
+        title: normalizeText(input.title, 160),
+        slug: normalizeText(input.slug, 120),
+        description: normalizeText(input.description, 600) || null,
+        is_active: input.isActive,
+        metadata: buildTaxonomyMetadata({
+          shortText: input.shortText,
+          displayOrder: input.sortOrder,
+          isFeatured: input.isFeatured,
+        }),
+      } as never,
+    )
+    .eq('id', collectionId)
+    .select('id')
+    .maybeSingle();
+  const typedResult = result as {
+    data: Pick<CollectionRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedResult.error || !typedResult.data) {
+    return {
+      ok: false,
+      error: mapDatabaseError(typedResult.error?.message, 'collection_not_found'),
+    };
+  }
+
+  return { ok: true };
+}
+
+export async function deleteAdminCollection(
+  collectionId: string,
+): Promise<MutationResult<{ removedProductLinksCount: number }>> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const collectionResult = await client
+    .from('collections')
+    .select('id')
+    .eq('id', collectionId)
+    .maybeSingle();
+
+  if (collectionResult.error || !collectionResult.data) {
+    return { ok: false, error: 'collection_not_found' };
+  }
+
+  const linkedItemsResult = await client
+    .from('collection_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('collection_id', collectionId);
+
+  if (linkedItemsResult.error) {
+    return { ok: false, error: 'collection_delete_precheck_failed' };
+  }
+
+  const deleteLinksResult = await client
+    .from('collection_items')
+    .delete()
+    .eq('collection_id', collectionId);
+
+  if (deleteLinksResult.error) {
+    return { ok: false, error: deleteLinksResult.error.message };
+  }
+
+  const deleteResult = await client
+    .from('collections')
+    .delete()
+    .eq('id', collectionId)
+    .select('id')
+    .maybeSingle();
+  const typedDeleteResult = deleteResult as {
+    data: Pick<CollectionRow, 'id'> | null;
+    error: { message: string } | null;
+  };
+
+  if (typedDeleteResult.error || !typedDeleteResult.data) {
+    return { ok: false, error: typedDeleteResult.error?.message || 'delete_collection_failed' };
+  }
+
+  return {
+    ok: true,
+    data: {
+      removedProductLinksCount: linkedItemsResult.count ?? 0,
+    },
+  };
+}
+
+export async function upsertAdminProductCollection(
+  productId: string,
+  collectionId: string,
+  sortOrder: number,
+): Promise<MutationResult> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  if (!Number.isInteger(sortOrder) || sortOrder < 0) {
+    return { ok: false, error: 'invalid_collection_sort_order' };
+  }
+
+  const productResult = await getProductRow(productId);
+  if (!productResult.ok) {
+    return { ok: false, error: productResult.error };
+  }
+
+  const collectionExists = await ensureCollectionExists(collectionId);
+  if (!collectionExists) {
+    return { ok: false, error: 'collection_not_found' };
+  }
+
+  const result = await client
+    .from('collection_items')
+    .upsert(
+      {
+        collection_id: collectionId,
+        product_id: productId,
+        sort_order: sortOrder,
+      } as never,
+      { onConflict: 'collection_id,product_id' },
+    );
+
+  if (result.error) {
+    return { ok: false, error: result.error.message };
+  }
+
+  return { ok: true };
+}
+
+export async function deleteAdminProductCollection(
+  productId: string,
+  collectionId: string,
+): Promise<MutationResult> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return { ok: false, error: 'not_configured' };
+  }
+
+  const result = await client
+    .from('collection_items')
+    .delete()
+    .eq('product_id', productId)
+    .eq('collection_id', collectionId);
+
+  if (result.error) {
+    return { ok: false, error: result.error.message };
   }
 
   return { ok: true };

@@ -1,13 +1,13 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { createAdminCategory, getAdminRequestAccess, type CategoryUpsertInput } from '@/features/admin';
+import { createAdminCollection, getAdminRequestAccess, type CollectionUpsertInput } from '@/features/admin';
 import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 function getAccessStatusCode(reason: string): number {
   return reason === 'no_session' ? 401 : 403;
 }
 
-function isCategoryPayload(value: unknown): value is CategoryUpsertInput {
+function isCollectionPayload(value: unknown): value is CollectionUpsertInput {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -17,6 +17,7 @@ function isCategoryPayload(value: unknown): value is CategoryUpsertInput {
     typeof record.title === 'string' &&
     typeof record.slug === 'string' &&
     typeof record.isActive === 'boolean' &&
+    typeof record.isFeatured === 'boolean' &&
     typeof record.sortOrder === 'number'
   );
 }
@@ -40,14 +41,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!isCategoryPayload(payload)) {
+  if (!isCollectionPayload(payload)) {
     return NextResponse.json(
-      { ok: false, error: 'invalid_category_payload' },
+      { ok: false, error: 'invalid_collection_payload' },
       { status: 400 },
     );
   }
 
-  const result = await createAdminCategory(payload);
+  const result = await createAdminCollection(payload);
 
   if (!result.ok || !result.data) {
     const status = result.error === 'not_configured' ? 503 : 400;

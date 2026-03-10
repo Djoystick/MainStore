@@ -1,6 +1,7 @@
 export { getAdminPageAccess, getAdminRequestAccess } from './access';
 export {
   getAdminCategories,
+  getAdminCollections,
   getAdminDashboardData,
   getAdminOrderDetail,
   getAdminOrders,
@@ -9,12 +10,18 @@ export {
 } from './data';
 export {
   createAdminCategory,
+  createAdminCollection,
   createAdminProduct,
   createAdminProductImage,
+  deleteAdminCategory,
+  deleteAdminCollection,
   deleteAdminProduct,
+  deleteAdminProductCollection,
   deleteAdminProductImage,
   duplicateAdminProduct,
+  upsertAdminProductCollection,
   updateAdminCategory,
+  updateAdminCollection,
   updateAdminOrderStatus,
   updateAdminProduct,
   updateAdminProductFeatured,
@@ -23,13 +30,17 @@ export {
 } from './mutations';
 export type {
   AdminCategoryOption,
+  AdminCollectionOption,
   AdminDashboardData,
   AdminOrderDetail,
   AdminOrderDetailItem,
   AdminOrderListItem,
+  AdminProductCollectionAssignment,
   AdminProductDetail,
   AdminProductImageItem,
   AdminProductListItem,
+  CategoryUpsertInput,
+  CollectionUpsertInput,
   OrderStatus,
   ProductImageUpsertInput,
   ProductStatus,

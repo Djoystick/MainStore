@@ -1,6 +1,5 @@
 import Link from 'next/link';
 
-import { AdminCategoriesManager } from '@/components/admin/AdminCategoriesManager';
 import { AdminProductsCatalogManager } from '@/components/admin/AdminProductsCatalogManager';
 import { AdminScreen } from '@/components/admin/AdminScreen';
 import adminStyles from '@/components/admin/admin.module.css';
@@ -57,10 +56,6 @@ export default async function AdminProductsPage() {
           products={productsResult.products}
           categories={productsResult.categories}
         />
-      )}
-
-      {productsResult.status === 'ok' && (
-        <AdminCategoriesManager categories={productsResult.categories} />
       )}
     </AdminScreen>
   );

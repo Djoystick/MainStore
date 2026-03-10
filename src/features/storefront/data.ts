@@ -5,6 +5,7 @@ import {
 import { findStoreProduct, storeProducts } from '@/components/store/mock-products';
 import type { StoreProduct } from '@/components/store/types';
 import type { Database } from '@/types/db';
+import { parseTaxonomyMetadata } from '@/features/catalog-taxonomy/metadata';
 
 import {
   buildStorefrontPromoBanners,
@@ -33,7 +34,10 @@ type ProductImageListRow = Pick<
   ProductImageRow,
   'id' | 'product_id' | 'url' | 'alt' | 'sort_order' | 'is_primary' | 'created_at'
 >;
-type CollectionListRow = Pick<CollectionRow, 'id' | 'slug' | 'title' | 'description'>;
+type CollectionListRow = Pick<
+  CollectionRow,
+  'id' | 'slug' | 'title' | 'description' | 'metadata' | 'updated_at'
+>;
 type CollectionItemListRow = Pick<
   CollectionItemRow,
   'collection_id' | 'product_id' | 'sort_order' | 'created_at'
@@ -300,16 +304,25 @@ async function fetchActiveCollections(
 
   const { data: collectionRows, error: collectionsError } = await client
     .from('collections')
-    .select('id, slug, title, description')
+    .select('id, slug, title, description, metadata, updated_at')
     .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .limit(6);
+    .limit(12);
 
   if (collectionsError || !collectionRows || collectionRows.length === 0) {
     return buildFallbackCollections(products);
   }
 
-  const rows = collectionRows as CollectionListRow[];
+  const rows = (collectionRows as CollectionListRow[]).sort((left, right) => {
+    const leftMeta = parseTaxonomyMetadata(left.metadata);
+    const rightMeta = parseTaxonomyMetadata(right.metadata);
+    if (leftMeta.isFeatured !== rightMeta.isFeatured) {
+      return leftMeta.isFeatured ? -1 : 1;
+    }
+    if (leftMeta.displayOrder !== rightMeta.displayOrder) {
+      return leftMeta.displayOrder - rightMeta.displayOrder;
+    }
+    return right.updated_at.localeCompare(left.updated_at);
+  });
   const collectionIds = rows.map((row) => row.id);
 
   const { data: itemRows, error: itemsError } = await client
@@ -372,11 +385,13 @@ async function fetchActiveCollections(
         id: collection.id,
         slug: collection.slug,
         title: collection.title,
-        description: collection.description,
+        description: parseTaxonomyMetadata(collection.metadata).shortText ?? collection.description,
+        isFeatured: parseTaxonomyMetadata(collection.metadata).isFeatured,
         products: collectionProducts,
       };
     })
-    .filter((collection) => collection.products.length > 0);
+    .filter((collection) => collection.products.length > 0)
+    .slice(0, 8);
 
   if (mapped.length === 0) {
     return buildFallbackCollections(products);
@@ -393,9 +408,8 @@ async function fetchActiveCategories(): Promise<StorefrontCategory[]> {
 
   const { data, error } = await client
     .from('categories')
-    .select('id, slug, title')
-    .eq('is_active', true)
-    .order('title', { ascending: true });
+    .select('id, slug, title, description, metadata')
+    .eq('is_active', true);
 
   if (error || !data || data.length === 0) {
     return fallbackCategories;
@@ -403,11 +417,21 @@ async function fetchActiveCategories(): Promise<StorefrontCategory[]> {
 
   return [
     { id: 'all', slug: 'all', title: 'All' },
-    ...(data as Pick<CategoryRow, 'id' | 'slug' | 'title'>[]).map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-    })),
+    ...(data as Array<Pick<CategoryRow, 'id' | 'slug' | 'title' | 'description' | 'metadata'>>)
+      .sort((left, right) => {
+        const leftMeta = parseTaxonomyMetadata(left.metadata);
+        const rightMeta = parseTaxonomyMetadata(right.metadata);
+        if (leftMeta.displayOrder !== rightMeta.displayOrder) {
+          return leftMeta.displayOrder - rightMeta.displayOrder;
+        }
+        return left.title.localeCompare(right.title);
+      })
+      .map((row) => ({
+        id: row.id,
+        slug: row.slug,
+        title: row.title,
+        description: parseTaxonomyMetadata(row.metadata).shortText ?? row.description,
+      })),
   ];
 }
 
@@ -415,6 +439,7 @@ export interface StorefrontCategory {
   id: string;
   slug: string;
   title: string;
+  description?: string | null;
 }
 
 export interface StorefrontCollection {
@@ -422,6 +447,7 @@ export interface StorefrontCollection {
   slug: string;
   title: string;
   description: string | null;
+  isFeatured?: boolean;
   products: StoreProduct[];
 }
 

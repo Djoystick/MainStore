@@ -96,7 +96,9 @@ export default async function HomePage() {
                 aria-label={`Open ${category.title} category`}
               >
                 <p className={styles.categoryShortcutTitle}>{category.title}</p>
-                <p className={styles.categoryShortcutSub}>Explore selection</p>
+                <p className={styles.categoryShortcutSub}>
+                  {category.description || 'Explore selection'}
+                </p>
               </Link>
             ))}
           </div>

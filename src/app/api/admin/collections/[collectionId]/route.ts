@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import {
-  deleteAdminCategory,
+  deleteAdminCollection,
   getAdminRequestAccess,
-  updateAdminCategory,
-  type CategoryUpsertInput,
+  updateAdminCollection,
+  type CollectionUpsertInput,
 } from '@/features/admin';
 import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
@@ -12,7 +12,7 @@ function getAccessStatusCode(reason: string): number {
   return reason === 'no_session' ? 401 : 403;
 }
 
-function isCategoryPayload(value: unknown): value is CategoryUpsertInput {
+function isCollectionPayload(value: unknown): value is CollectionUpsertInput {
   if (!value || typeof value !== 'object') {
     return false;
   }
@@ -22,13 +22,14 @@ function isCategoryPayload(value: unknown): value is CategoryUpsertInput {
     typeof record.title === 'string' &&
     typeof record.slug === 'string' &&
     typeof record.isActive === 'boolean' &&
+    typeof record.isFeatured === 'boolean' &&
     typeof record.sortOrder === 'number'
   );
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ collectionId: string }> },
 ) {
   const access = await getAdminRequestAccess(request);
   if (!access.ok) {
@@ -38,10 +39,10 @@ export async function PATCH(
     );
   }
 
-  const { categoryId } = await params;
-  if (!categoryId) {
+  const { collectionId } = await params;
+  if (!collectionId) {
     return NextResponse.json(
-      { ok: false, error: 'category_id_required' },
+      { ok: false, error: 'collection_id_required' },
       { status: 400 },
     );
   }
@@ -56,20 +57,20 @@ export async function PATCH(
     );
   }
 
-  if (!isCategoryPayload(payload)) {
+  if (!isCollectionPayload(payload)) {
     return NextResponse.json(
-      { ok: false, error: 'invalid_category_payload' },
+      { ok: false, error: 'invalid_collection_payload' },
       { status: 400 },
     );
   }
 
-  const result = await updateAdminCategory(categoryId, payload);
+  const result = await updateAdminCollection(collectionId, payload);
 
   if (!result.ok) {
     const status =
       result.error === 'not_configured'
         ? 503
-        : result.error === 'category_not_found'
+        : result.error === 'collection_not_found'
           ? 404
           : 400;
     const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
@@ -84,7 +85,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ categoryId: string }> },
+  { params }: { params: Promise<{ collectionId: string }> },
 ) {
   const access = await getAdminRequestAccess(request);
   if (!access.ok) {
@@ -94,20 +95,20 @@ export async function DELETE(
     );
   }
 
-  const { categoryId } = await params;
-  if (!categoryId) {
+  const { collectionId } = await params;
+  if (!collectionId) {
     return NextResponse.json(
-      { ok: false, error: 'category_id_required' },
+      { ok: false, error: 'collection_id_required' },
       { status: 400 },
     );
   }
 
-  const result = await deleteAdminCategory(categoryId);
+  const result = await deleteAdminCollection(collectionId);
   if (!result.ok || !result.data) {
     const status =
       result.error === 'not_configured'
         ? 503
-        : result.error === 'category_not_found'
+        : result.error === 'collection_not_found'
           ? 404
           : 400;
     const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;

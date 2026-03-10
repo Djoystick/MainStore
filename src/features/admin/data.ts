@@ -5,14 +5,17 @@ import {
   getSupabaseAdminMissingEnvMessage,
 } from '@/lib/supabase';
 import type { Database, Json } from '@/types/db';
+import { parseTaxonomyMetadata } from '@/features/catalog-taxonomy/metadata';
 
 import type {
   AdminCategoryOption,
+  AdminCollectionOption,
   AdminDashboardData,
   AdminOrderDetail,
   AdminOrderDetailItem,
   AdminOrderListItem,
   AdminProductDetail,
+  AdminProductCollectionAssignment,
   AdminProductImageItem,
   AdminProductListItem,
 } from './types';
@@ -46,6 +49,7 @@ export interface AdminProductsResult extends AdminResultBase {
 export interface AdminProductDetailResult extends AdminResultBase {
   product: AdminProductDetail | null;
   categories: AdminCategoryOption[];
+  collections: AdminCollectionOption[];
 }
 
 export interface AdminOrdersResult extends AdminResultBase {
@@ -62,6 +66,10 @@ export interface AdminDashboardResult extends AdminResultBase {
 
 export interface AdminCategoriesResult extends AdminResultBase {
   categories: AdminCategoryOption[];
+}
+
+export interface AdminCollectionsResult extends AdminResultBase {
+  collections: AdminCollectionOption[];
 }
 
 function parseShippingAddress(shippingAddress: Json) {
@@ -88,13 +96,58 @@ function parseShippingAddress(shippingAddress: Json) {
 
 function mapCategories(rows: CategoryRow[]): AdminCategoryOption[] {
   return rows
-    .sort((left, right) => left.title.localeCompare(right.title))
-    .map((row) => ({
-      id: row.id,
-      title: row.title,
-      slug: row.slug,
-      isActive: row.is_active,
-    }));
+    .sort((left, right) => {
+      const leftMeta = parseTaxonomyMetadata(left.metadata);
+      const rightMeta = parseTaxonomyMetadata(right.metadata);
+      if (leftMeta.displayOrder !== rightMeta.displayOrder) {
+        return leftMeta.displayOrder - rightMeta.displayOrder;
+      }
+      return left.title.localeCompare(right.title);
+    })
+    .map((row) => {
+      const metadata = parseTaxonomyMetadata(row.metadata);
+
+      return {
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        description: row.description,
+        shortText: metadata.shortText,
+        isActive: row.is_active,
+        sortOrder: metadata.displayOrder,
+        productsCount: 0,
+      };
+    });
+}
+
+function mapCollections(rows: CollectionRow[]): AdminCollectionOption[] {
+  return rows
+    .sort((left, right) => {
+      const leftMeta = parseTaxonomyMetadata(left.metadata);
+      const rightMeta = parseTaxonomyMetadata(right.metadata);
+      if (leftMeta.isFeatured !== rightMeta.isFeatured) {
+        return leftMeta.isFeatured ? -1 : 1;
+      }
+      if (leftMeta.displayOrder !== rightMeta.displayOrder) {
+        return leftMeta.displayOrder - rightMeta.displayOrder;
+      }
+      return left.title.localeCompare(right.title);
+    })
+    .map((row) => {
+      const metadata = parseTaxonomyMetadata(row.metadata);
+
+      return {
+        id: row.id,
+        title: row.title,
+        slug: row.slug,
+        description: row.description,
+        shortText: metadata.shortText,
+        isActive: row.is_active,
+        isFeatured: metadata.isFeatured,
+        sortOrder: metadata.displayOrder,
+        productsCount: 0,
+      };
+    });
 }
 
 function mapProductImages(rows: ProductImageRow[]): Map<string, ProductImageRow[]> {
@@ -186,6 +239,30 @@ function mapCollectionTitles(
     .filter((value): value is string => Boolean(value));
 }
 
+function mapCollectionAssignments(
+  collectionRows: CollectionRow[],
+  collectionItemRows: CollectionItemRow[],
+): AdminProductCollectionAssignment[] {
+  const collectionsById = new Map(collectionRows.map((row) => [row.id, row]));
+
+  return [...collectionItemRows]
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((row) => {
+      const collection = collectionsById.get(row.collection_id);
+      if (!collection) {
+        return null;
+      }
+
+      return {
+        collectionId: row.collection_id,
+        title: collection.title,
+        slug: collection.slug,
+        sortOrder: row.sort_order,
+      };
+    })
+    .filter((value): value is AdminProductCollectionAssignment => Boolean(value));
+}
+
 export async function getAdminCategories(): Promise<AdminCategoriesResult> {
   const client = createSupabaseAdminClientOptional();
   if (!client) {
@@ -199,25 +276,109 @@ export async function getAdminCategories(): Promise<AdminCategoriesResult> {
     };
   }
 
-  const result = await client
-    .from('categories')
-    .select('*')
-    .order('title', { ascending: true });
+  const [categoriesResult, productsResult] = await Promise.all([
+    client.from('categories').select('*'),
+    client.from('products').select('category_id'),
+  ]);
 
-  if (result.error) {
+  if (categoriesResult.error) {
     return {
       status: 'error',
       categories: [],
       message: toPublicDataErrorMessage(
         'Could not load categories right now.',
-        result.error.message,
+        categoriesResult.error.message,
       ),
     };
   }
 
+  if (productsResult.error) {
+    return {
+      status: 'error',
+      categories: [],
+      message: toPublicDataErrorMessage(
+        'Could not load category usage right now.',
+        productsResult.error.message,
+      ),
+    };
+  }
+
+  const countsByCategoryId = new Map<string, number>();
+  ((productsResult.data ?? []) as Array<Pick<ProductRow, 'category_id'>>).forEach((row) => {
+    if (!row.category_id) {
+      return;
+    }
+
+    countsByCategoryId.set(row.category_id, (countsByCategoryId.get(row.category_id) ?? 0) + 1);
+  });
+
+  const categories = mapCategories((categoriesResult.data ?? []) as CategoryRow[]).map((category) => ({
+    ...category,
+    productsCount: countsByCategoryId.get(category.id) ?? 0,
+  }));
+
   return {
     status: 'ok',
-    categories: mapCategories((result.data ?? []) as CategoryRow[]),
+    categories,
+  };
+}
+
+export async function getAdminCollections(): Promise<AdminCollectionsResult> {
+  const client = createSupabaseAdminClientOptional();
+  if (!client) {
+    return {
+      status: 'not_configured',
+      collections: [],
+      message: toPublicDataErrorMessage(
+        'Admin collections are temporarily unavailable.',
+        getSupabaseAdminMissingEnvMessage(),
+      ),
+    };
+  }
+
+  const [collectionsResult, collectionItemsResult] = await Promise.all([
+    client.from('collections').select('*'),
+    client.from('collection_items').select('collection_id'),
+  ]);
+
+  if (collectionsResult.error) {
+    return {
+      status: 'error',
+      collections: [],
+      message: toPublicDataErrorMessage(
+        'Could not load collections right now.',
+        collectionsResult.error.message,
+      ),
+    };
+  }
+
+  if (collectionItemsResult.error) {
+    return {
+      status: 'error',
+      collections: [],
+      message: toPublicDataErrorMessage(
+        'Could not load collection usage right now.',
+        collectionItemsResult.error.message,
+      ),
+    };
+  }
+
+  const countsByCollectionId = new Map<string, number>();
+  ((collectionItemsResult.data ?? []) as Array<Pick<CollectionItemRow, 'collection_id'>>).forEach((row) => {
+    countsByCollectionId.set(
+      row.collection_id,
+      (countsByCollectionId.get(row.collection_id) ?? 0) + 1,
+    );
+  });
+
+  const collections = mapCollections((collectionsResult.data ?? []) as CollectionRow[]).map((collection) => ({
+    ...collection,
+    productsCount: countsByCollectionId.get(collection.id) ?? 0,
+  }));
+
+  return {
+    status: 'ok',
+    collections,
   };
 }
 
@@ -369,6 +530,7 @@ export async function getAdminProductDetail(
       status: 'not_configured',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Admin product details are temporarily unavailable.',
         getSupabaseAdminMissingEnvMessage(),
@@ -376,9 +538,10 @@ export async function getAdminProductDetail(
     };
   }
 
-  const [productResult, categoriesResult, imagesResult] = await Promise.all([
+  const [productResult, categoriesResult, collectionsResult, imagesResult] = await Promise.all([
     client.from('products').select('*').eq('id', productId).maybeSingle(),
     client.from('categories').select('*').order('title', { ascending: true }),
+    client.from('collections').select('*'),
     client
       .from('product_images')
       .select('*')
@@ -391,6 +554,7 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load product details right now.',
         productResult.error.message,
@@ -403,9 +567,23 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load categories right now.',
         categoriesResult.error.message,
+      ),
+    };
+  }
+
+  if (collectionsResult.error) {
+    return {
+      status: 'error',
+      product: null,
+      categories: [],
+      collections: [],
+      message: toPublicDataErrorMessage(
+        'Could not load collections right now.',
+        collectionsResult.error.message,
       ),
     };
   }
@@ -415,6 +593,7 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load product images right now.',
         imagesResult.error.message,
@@ -423,11 +602,13 @@ export async function getAdminProductDetail(
   }
 
   const categories = mapCategories((categoriesResult.data ?? []) as CategoryRow[]);
+  const collections = mapCollections((collectionsResult.data ?? []) as CollectionRow[]);
   if (!productResult.data) {
     return {
       status: 'ok',
       product: null,
       categories,
+      collections,
     };
   }
 
@@ -462,6 +643,7 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load product collections right now.',
         collectionItemsResult.error.message,
@@ -474,6 +656,7 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load product favorites summary right now.',
         favoritesCountResult.error.message,
@@ -486,6 +669,7 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load product cart summary right now.',
         cartItemsCountResult.error.message,
@@ -498,6 +682,7 @@ export async function getAdminProductDetail(
       status: 'error',
       product: null,
       categories: [],
+      collections: [],
       message: toPublicDataErrorMessage(
         'Could not load product order history summary right now.',
         orderItemsCountResult.error.message,
@@ -519,6 +704,7 @@ export async function getAdminProductDetail(
         status: 'error',
         product: null,
         categories: [],
+        collections: [],
         message: toPublicDataErrorMessage(
           'Could not load linked collections right now.',
           collectionsResult.error.message,
@@ -533,10 +719,15 @@ export async function getAdminProductDetail(
   }
 
   const imageItems = mapImageList((imagesResult.data ?? []) as ProductImageRow[]);
+  const collectionAssignments = mapCollectionAssignments(
+    (collectionsResult.data ?? []) as CollectionRow[],
+    collectionItemRows,
+  );
 
   return {
     status: 'ok',
     categories,
+    collections,
     product: {
       id: productRow.id,
       slug: productRow.slug,
@@ -558,6 +749,7 @@ export async function getAdminProductDetail(
       description: productRow.description,
       images: imageItems,
       collectionTitles,
+      collectionAssignments,
       collectionsCount: collectionTitles.length,
       imagesCount: imageItems.length,
       favoritesCount: favoritesCountResult.count ?? 0,
