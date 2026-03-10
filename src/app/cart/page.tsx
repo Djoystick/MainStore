@@ -58,6 +58,16 @@ export default async function CartPage() {
         </div>
       </StoreSection>
 
+      {cartData.items.length > 0 && (
+        <Link
+          href="/checkout"
+          className={styles.primaryLinkButton}
+          aria-label="Proceed to checkout"
+        >
+          Proceed to checkout
+        </Link>
+      )}
+
       {isSessionMissing ? (
         <StoreEmptyState
           title="Cart needs Telegram session"

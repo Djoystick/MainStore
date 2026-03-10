@@ -365,7 +365,25 @@ export interface Database {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_order_from_cart: {
+        Args: {
+          p_user_id: string;
+          p_customer_display_name: string;
+          p_customer_phone: string;
+          p_shipping_city: string;
+          p_shipping_address_line: string;
+          p_shipping_postal_code?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Array<{
+          order_id: string;
+          total_amount: number;
+          currency: string;
+          items_count: number;
+        }>;
+      };
+    };
     CompositeTypes: Record<string, never>;
     Enums: {
       app_role: AppRole;

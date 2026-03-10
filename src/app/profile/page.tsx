@@ -3,13 +3,22 @@ import Link from 'next/link';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
+import { formatStorePrice } from '@/components/store/formatPrice';
+import { classNames } from '@/css/classnames';
 import { getCurrentUserContext } from '@/features/auth';
+import { getOrdersForProfile } from '@/features/orders/data';
 import { getUserStoreSummaryForProfile } from '@/features/user-store/data';
 import styles from '@/components/store/store.module.css';
+
+function formatOrderStatus(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 export default async function ProfilePage() {
   const { profile } = await getCurrentUserContext();
   const summary = await getUserStoreSummaryForProfile(profile?.id ?? null);
+  const ordersData = await getOrdersForProfile(profile?.id ?? null);
+  const latestOrder = ordersData.orders[0] ?? null;
   const displayName = profile?.displayName || profile?.username || 'Telegram user';
   const username = profile?.username ? `@${profile.username}` : 'No username';
 
@@ -17,6 +26,18 @@ export default async function ProfilePage() {
     <StoreScreen title="Profile" subtitle="Your account and purchase flow">
       {profile ? (
         <>
+          {ordersData.message && (
+            <section
+              className={classNames(
+                styles.dataNotice,
+                ordersData.status === 'error' && styles.dataNoticeError,
+              )}
+            >
+              <p className={styles.dataNoticeTitle}>Profile orders status</p>
+              <p className={styles.dataNoticeText}>{ordersData.message}</p>
+            </section>
+          )}
+
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>{displayName}</h2>
             <p className={styles.panelText}>
@@ -36,8 +57,34 @@ export default async function ProfilePage() {
                 <p className={styles.infoLabel}>Cart qty</p>
                 <p className={styles.infoValue}>{summary.cartQuantityTotal}</p>
               </div>
+              <div className={styles.infoItem}>
+                <p className={styles.infoLabel}>Orders</p>
+                <p className={styles.infoValue}>{ordersData.totalOrders}</p>
+              </div>
             </div>
           </StoreSection>
+
+          {latestOrder && (
+            <StoreSection title="Latest order">
+              <Link
+                href={`/orders/${latestOrder.id}`}
+                className={styles.orderCard}
+                aria-label="Open latest order"
+              >
+                <div className={styles.orderCardHeader}>
+                  <p className={styles.orderCardId}>
+                    Order #{latestOrder.id.slice(0, 8).toUpperCase()}
+                  </p>
+                  <span className={styles.orderStatusBadge}>
+                    {formatOrderStatus(latestOrder.status)}
+                  </span>
+                </div>
+                <p className={styles.orderMetaItem}>
+                  {formatStorePrice(latestOrder.totalCents, latestOrder.currency)}
+                </p>
+              </Link>
+            </StoreSection>
+          )}
         </>
       ) : (
         <StoreEmptyState

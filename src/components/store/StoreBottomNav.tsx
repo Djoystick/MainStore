@@ -32,7 +32,7 @@ const navItems: NavItem[] = [
     href: '/cart',
     icon: 'CR',
     label: 'Cart',
-    isActive: (pathname) => pathname === '/cart',
+    isActive: (pathname) => pathname === '/cart' || pathname === '/checkout',
   },
   {
     href: '/favorites',
@@ -46,7 +46,7 @@ const navItems: NavItem[] = [
     label: 'Profile',
     isActive: (pathname) =>
       pathname === '/profile' ||
-      pathname === '/orders' ||
+      pathname.startsWith('/orders') ||
       pathname === '/admin',
   },
 ];
