@@ -1,36 +1,78 @@
+import Link from 'next/link';
+
+import { AdminScreen } from '@/components/admin/AdminScreen';
+import adminStyles from '@/components/admin/admin.module.css';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
-import { StoreScreen } from '@/components/store/StoreScreen';
-import { StoreSection } from '@/components/store/StoreSection';
-import styles from '@/components/store/store.module.css';
+import { classNames } from '@/css/classnames';
+import { getAdminDashboardData } from '@/features/admin';
+import storeStyles from '@/components/store/store.module.css';
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  const dashboard = await getAdminDashboardData();
+
   return (
-    <StoreScreen title="Admin" subtitle="Technical route outside customer navigation">
-      <StoreSection title="Dashboard">
-        <div className={styles.infoGrid}>
-          <div className={styles.infoItem}>
-            <p className={styles.infoLabel}>Products</p>
-            <p className={styles.infoValue}>0</p>
-          </div>
-          <div className={styles.infoItem}>
-            <p className={styles.infoLabel}>Pending orders</p>
-            <p className={styles.infoValue}>0</p>
-          </div>
-        </div>
-      </StoreSection>
+    <AdminScreen title="Admin Dashboard" subtitle="Manage catalog and orders">
+      {dashboard.message && (
+        <section
+          className={classNames(
+            storeStyles.dataNotice,
+            dashboard.status === 'error' && storeStyles.dataNoticeError,
+          )}
+        >
+          <p className={storeStyles.dataNoticeTitle}>Admin data status</p>
+          <p className={storeStyles.dataNoticeText}>{dashboard.message}</p>
+        </section>
+      )}
 
-      <section className={styles.panel}>
-        <h2 className={styles.panelTitle}>Admin workspace</h2>
-        <p className={styles.panelText}>
-          Product editing, moderation workflows, and role checks are intentionally
-          not connected in this stage.
-        </p>
-      </section>
+      {dashboard.dashboard ? (
+        <>
+          <section className={storeStyles.section}>
+            <h2 className={storeStyles.sectionTitle}>Store metrics</h2>
+            <div className={storeStyles.infoGrid}>
+              <div className={storeStyles.infoItem}>
+                <p className={storeStyles.infoLabel}>Products</p>
+                <p className={storeStyles.infoValue}>{dashboard.dashboard.productsCount}</p>
+              </div>
+              <div className={storeStyles.infoItem}>
+                <p className={storeStyles.infoLabel}>Orders</p>
+                <p className={storeStyles.infoValue}>{dashboard.dashboard.ordersCount}</p>
+              </div>
+              <div className={storeStyles.infoItem}>
+                <p className={storeStyles.infoLabel}>Active products</p>
+                <p className={storeStyles.infoValue}>
+                  {dashboard.dashboard.activeProductsCount}
+                </p>
+              </div>
+              <div className={storeStyles.infoItem}>
+                <p className={storeStyles.infoLabel}>Pending orders</p>
+                <p className={storeStyles.infoValue}>
+                  {dashboard.dashboard.pendingOrdersCount}
+                </p>
+              </div>
+            </div>
+          </section>
 
-      <StoreEmptyState
-        title="Backend hooks are not connected"
-        description="This route remains visual-only for now and ready for role-based access in the next stage."
-      />
-    </StoreScreen>
+          <section className={adminStyles.adminCard}>
+            <h2 className={adminStyles.adminCardTitle}>Management links</h2>
+            <div className={adminStyles.adminActions}>
+              <Link href="/admin/products" className={adminStyles.adminPrimaryLink}>
+                Open products
+              </Link>
+              <Link href="/admin/orders" className={adminStyles.adminActionLink}>
+                Open orders
+              </Link>
+              <Link href="/admin/import" className={adminStyles.adminActionLink}>
+                Import scaffold
+              </Link>
+            </div>
+          </section>
+        </>
+      ) : (
+        <StoreEmptyState
+          title="Admin data is unavailable"
+          description="Configure server-side Supabase settings and retry."
+        />
+      )}
+    </AdminScreen>
   );
 }
