@@ -3,12 +3,14 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useTelegramUnauthorizedMessage } from '@/components/auth/TelegramSessionBootstrap';
+
 import styles from './store.module.css';
 
-function mapSandboxError(error: string | undefined): string {
+function mapSandboxError(error: string | undefined, unauthorizedMessage: string): string {
   switch (error) {
     case 'unauthorized':
-      return 'Откройте MainStore в Telegram, чтобы завершить оплату.';
+      return unauthorizedMessage;
     case 'payment_attempt_not_found':
       return 'Платёжная сессия не найдена.';
     case 'order_not_found':
@@ -27,6 +29,9 @@ interface SandboxPaymentActionsProps {
 
 export function SandboxPaymentActions({ attemptId, orderId }: SandboxPaymentActionsProps) {
   const router = useRouter();
+  const unauthorizedMessage = useTelegramUnauthorizedMessage(
+    'Откройте MainStore в Telegram, чтобы завершить оплату.',
+  );
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
@@ -54,7 +59,7 @@ export function SandboxPaymentActions({ attemptId, orderId }: SandboxPaymentActi
           | null;
 
         if (!response.ok || !payload || !payload.ok) {
-          setErrorMessage(mapSandboxError(payload && !payload.ok ? payload.error : undefined));
+          setErrorMessage(mapSandboxError(payload && !payload.ok ? payload.error : undefined, unauthorizedMessage));
           return;
         }
 
@@ -102,3 +107,4 @@ export function SandboxPaymentActions({ attemptId, orderId }: SandboxPaymentActi
     </div>
   );
 }
+

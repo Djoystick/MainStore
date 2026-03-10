@@ -1,26 +1,28 @@
-﻿'use client';
+'use client';
 
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useTelegramUnauthorizedMessage } from '@/components/auth/TelegramSessionBootstrap';
+
 import styles from './store.module.css';
 
-function mapRetryPaymentError(error: string | undefined): string {
+function mapRetryPaymentError(error: string | undefined, unauthorizedMessage: string): string {
   switch (error) {
     case 'unauthorized':
-      return 'Откройте MainStore в Telegram, чтобы продолжить оплату.';
+      return unauthorizedMessage;
     case 'order_not_found':
       return 'Заказ не найден.';
     case 'order_cancelled':
-      return 'Оплата недоступна для отменённого заказа.';
+      return 'Оплата недоступна для отмененного заказа.';
     case 'already_paid':
       return 'Этот заказ уже оплачен.';
     case 'not_configured':
-      return 'Платёжный слой временно недоступен.';
+      return 'Платежный слой временно недоступен.';
     case 'payment_provider_not_supported':
-      return 'Текущий платёжный провайдер пока не подключён.';
+      return 'Текущий платежный провайдер пока не подключен.';
     default:
-      return 'Не удалось продолжить оплату. Попробуйте ещё раз.';
+      return 'Не удалось продолжить оплату. Попробуйте еще раз.';
   }
 }
 
@@ -31,6 +33,9 @@ interface OrderPaymentActionProps {
 
 export function OrderPaymentAction({ orderId, label }: OrderPaymentActionProps) {
   const router = useRouter();
+  const unauthorizedMessage = useTelegramUnauthorizedMessage(
+    'Откройте MainStore в Telegram, чтобы продолжить оплату.',
+  );
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
@@ -66,18 +71,24 @@ export function OrderPaymentAction({ orderId, label }: OrderPaymentActionProps) 
           | null;
 
         if (!response.ok || !payload || !payload.ok) {
-          setErrorMessage(mapRetryPaymentError(payload && !payload.ok ? payload.error : undefined));
+          setErrorMessage(
+            mapRetryPaymentError(
+              payload && !payload.ok ? payload.error : undefined,
+              unauthorizedMessage,
+            ),
+          );
           return;
         }
 
         if (payload.checkoutUrl) {
-          window.location.assign(payload.checkoutUrl);
+          window.location.href = payload.checkoutUrl;
           return;
         }
 
+        router.push(`/orders/${payload.orderId}`);
         router.refresh();
       } catch {
-        setErrorMessage('Сетевая ошибка при запуске оплаты.');
+        setErrorMessage('Сетевая ошибка при продолжении оплаты.');
       } finally {
         isSubmittingRef.current = false;
       }
@@ -85,20 +96,16 @@ export function OrderPaymentAction({ orderId, label }: OrderPaymentActionProps) 
   };
 
   return (
-    <div className={styles.inlineActionBlock}>
+    <div className={styles.inlineActionStack}>
       <button
         type="button"
         className={styles.primaryButton}
         onClick={handleClick}
         disabled={isPending}
       >
-        {isPending ? 'Переходим к оплате...' : label}
+        {isPending ? 'Открываем оплату...' : label}
       </button>
-      {errorMessage && (
-        <p className={`${styles.inlineActionMessage} ${styles.inlineActionMessageError}`}>
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage ? <p className={styles.inlineActionMessageError}>{errorMessage}</p> : null}
     </div>
   );
 }

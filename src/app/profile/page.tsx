@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { TelegramSessionRequiredState } from '@/components/auth/TelegramSessionRequiredState';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
@@ -97,11 +98,12 @@ export default async function ProfilePage() {
   if (!profile) {
     return (
       <StoreScreen title="Профиль" subtitle="Аккаунт, история и быстрые действия">
-        <StoreEmptyState
-          title="Нет активной сессии"
-          description="Откройте MainStore в Telegram, чтобы загрузить профиль, избранное, корзину и заказы."
-          actionLabel="Открыть каталог"
-          actionHref="/catalog"
+        <TelegramSessionRequiredState
+          fallbackTitle="Нет активной сессии"
+          fallbackDescription="Откройте MainStore в Telegram, чтобы загрузить профиль, избранное, корзину и заказы."
+          fallbackActionLabel="Открыть каталог"
+          fallbackActionHref="/catalog"
+          retryHref="/profile"
         />
       </StoreScreen>
     );

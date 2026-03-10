@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useTelegramUnauthorizedMessage } from '@/components/auth/TelegramSessionBootstrap';
 import { classNames } from '@/css/classnames';
 
 import styles from './store.module.css';
@@ -14,9 +15,9 @@ interface AddToCartButtonProps {
   disabledLabel?: string;
 }
 
-function mapAddToCartError(error: string): string {
+function mapAddToCartError(error: string, unauthorizedMessage: string): string {
   if (error === 'unauthorized') {
-    return 'Откройте MainStore в Telegram, чтобы работать с корзиной.';
+    return unauthorizedMessage;
   }
   if (error === 'not_configured') {
     return 'Корзина временно недоступна.';
@@ -37,6 +38,9 @@ export function AddToCartButton({
   disabledLabel = 'Недоступно',
 }: AddToCartButtonProps) {
   const router = useRouter();
+  const unauthorizedMessage = useTelegramUnauthorizedMessage(
+    'Откройте MainStore в Telegram, чтобы работать с корзиной.',
+  );
   const [isPending, startTransition] = useTransition();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -67,7 +71,10 @@ export function AddToCartButton({
           | null;
 
         if (!response.ok || !payload || !payload.ok) {
-          const message = mapAddToCartError(payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown');
+          const message = mapAddToCartError(
+            payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown',
+            unauthorizedMessage,
+          );
           setStatusMessage(message);
           setIsError(true);
           return;

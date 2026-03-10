@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { TelegramSessionRequiredState } from '@/components/auth/TelegramSessionRequiredState';
 import { CartItemControls } from '@/components/store/CartItemControls';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
@@ -98,11 +99,12 @@ export default async function CartPage() {
       ) : null}
 
       {isSessionMissing ? (
-        <StoreEmptyState
-          title="Нужна сессия Telegram"
-          description="Откройте MainStore в Telegram, чтобы загрузить личную корзину."
-          actionLabel="Открыть каталог"
-          actionHref="/catalog"
+        <TelegramSessionRequiredState
+          fallbackTitle="Нужна сессия Telegram"
+          fallbackDescription="Откройте MainStore в Telegram, чтобы загрузить личную корзину."
+          fallbackActionLabel="Открыть каталог"
+          fallbackActionHref="/catalog"
+          retryHref="/cart"
         />
       ) : null}
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { TelegramSessionRequiredState } from '@/components/auth/TelegramSessionRequiredState';
 import { ProductCard } from '@/components/store/ProductCard';
 import { FavoriteToggleButton } from '@/components/store/FavoriteToggleButton';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
@@ -41,11 +42,12 @@ export default async function FavoritesPage() {
       ) : null}
 
       {isSessionMissing ? (
-        <StoreEmptyState
-          title="Нужна сессия Telegram"
-          description="Откройте MainStore в Telegram, чтобы загрузить личное избранное."
-          actionLabel="Открыть каталог"
-          actionHref="/catalog"
+        <TelegramSessionRequiredState
+          fallbackTitle="Нужна сессия Telegram"
+          fallbackDescription="Откройте MainStore в Telegram, чтобы загрузить личное избранное."
+          fallbackActionLabel="Открыть каталог"
+          fallbackActionHref="/catalog"
+          retryHref="/favorites"
         />
       ) : (
         <>

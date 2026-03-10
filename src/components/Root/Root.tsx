@@ -35,8 +35,7 @@ function RootInner({ children }: PropsWithChildren) {
       appearance={isDark ? 'dark' : 'light'}
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
-      <TelegramSessionBootstrap />
-      {children}
+      <TelegramSessionBootstrap>{children}</TelegramSessionBootstrap>
     </AppRoot>
   );
 }

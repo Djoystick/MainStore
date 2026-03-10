@@ -1,5 +1,6 @@
 ﻿import Link from 'next/link';
 
+import { TelegramSessionRequiredState } from '@/components/auth/TelegramSessionRequiredState';
 import { SandboxPaymentActions } from '@/components/store/SandboxPaymentActions';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
@@ -53,11 +54,12 @@ export default async function SandboxPaymentPage({
       )}
 
       {attemptResult.status === 'unauthorized' ? (
-        <StoreEmptyState
-          title="Нужна сессия Telegram"
-          description="Откройте MainStore в Telegram, чтобы завершить оплату."
-          actionLabel="Открыть каталог"
-          actionHref="/catalog"
+        <TelegramSessionRequiredState
+          fallbackTitle="Нужна сессия Telegram"
+          fallbackDescription="Откройте MainStore в Telegram, чтобы завершить оплату."
+          fallbackActionLabel="Открыть каталог"
+          fallbackActionHref="/catalog"
+          retryHref={`/pay/sandbox/${attemptId}`}
         />
       ) : null}
 
@@ -125,3 +127,5 @@ export default async function SandboxPaymentPage({
     </StoreScreen>
   );
 }
+
+

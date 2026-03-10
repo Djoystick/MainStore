@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
 
+import { TelegramSessionRequiredState } from '@/components/auth/TelegramSessionRequiredState';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
@@ -61,11 +62,12 @@ export default async function CheckoutPage() {
       ) : null}
 
       {isUnauthorized ? (
-        <StoreEmptyState
-          title="Нужна сессия Telegram"
-          description="Откройте MainStore в Telegram, чтобы оформить и оплатить заказ."
-          actionLabel="Открыть каталог"
-          actionHref="/catalog"
+        <TelegramSessionRequiredState
+          fallbackTitle="Нужна сессия Telegram"
+          fallbackDescription="Откройте MainStore в Telegram, чтобы оформить и оплатить заказ."
+          fallbackActionLabel="Открыть каталог"
+          fallbackActionHref="/catalog"
+          retryHref="/checkout"
         />
       ) : null}
 

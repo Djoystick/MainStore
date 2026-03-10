@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useTelegramUnauthorizedMessage } from '@/components/auth/TelegramSessionBootstrap';
 import { classNames } from '@/css/classnames';
 
 import styles from './store.module.css';
@@ -13,9 +14,9 @@ interface FavoriteToggleButtonProps {
   compact?: boolean;
 }
 
-function mapFavoriteError(error: string): string {
+function mapFavoriteError(error: string, unauthorizedMessage: string): string {
   if (error === 'unauthorized') {
-    return 'Откройте MainStore в Telegram, чтобы пользоваться избранным.';
+    return unauthorizedMessage;
   }
   if (error === 'not_configured') {
     return 'Избранное временно недоступно.';
@@ -29,6 +30,9 @@ export function FavoriteToggleButton({
   compact = false,
 }: FavoriteToggleButtonProps) {
   const router = useRouter();
+  const unauthorizedMessage = useTelegramUnauthorizedMessage(
+    'Откройте MainStore в Telegram, чтобы пользоваться избранным.',
+  );
   const [isPending, startTransition] = useTransition();
   const [isFavorited, setIsFavorited] = useState(initialFavorited);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -69,6 +73,7 @@ export function FavoriteToggleButton({
         if (!response.ok || !payload || !payload.ok) {
           const message = mapFavoriteError(
             payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown',
+            unauthorizedMessage,
           );
           setStatusMessage(message);
           setIsError(true);
@@ -76,7 +81,9 @@ export function FavoriteToggleButton({
         }
 
         setIsFavorited(payload.favorited);
-        setStatusMessage(payload.favorited ? 'Добавлено в избранное.' : 'Удалено из избранного.');
+        setStatusMessage(
+          payload.favorited ? 'Добавлено в избранное.' : 'Удалено из избранного.',
+        );
         setIsError(false);
         router.refresh();
       } catch {

@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
+import { useTelegramUnauthorizedMessage } from '@/components/auth/TelegramSessionBootstrap';
 import { classNames } from '@/css/classnames';
 
 import styles from './store.module.css';
 
-function mapReorderError(error: string | undefined): string {
+function mapReorderError(error: string | undefined, unauthorizedMessage: string): string {
   switch (error) {
     case 'unauthorized':
-      return 'Откройте MainStore в Telegram, чтобы повторить заказ.';
+      return unauthorizedMessage;
     case 'order_not_found':
       return 'Заказ не найден.';
     case 'no_reorderable_items':
@@ -27,6 +28,9 @@ interface OrderRepeatActionProps {
 }
 
 export function OrderRepeatAction({ orderId }: OrderRepeatActionProps) {
+  const unauthorizedMessage = useTelegramUnauthorizedMessage(
+    'Откройте MainStore в Telegram, чтобы повторить заказ.',
+  );
   const [isPending, startTransition] = useTransition();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -59,17 +63,23 @@ export function OrderRepeatAction({ orderId }: OrderRepeatActionProps) {
           | null;
 
         if (!response.ok || !payload || !payload.ok) {
-          setErrorMessage(mapReorderError(payload && !payload.ok ? payload.error : undefined));
+          setErrorMessage(
+            mapReorderError(
+              payload && !payload.ok ? payload.error : undefined,
+              unauthorizedMessage,
+            ),
+          );
           return;
         }
 
-        const unavailableNote =
-          payload.unavailableItemsCount > 0
-            ? ` Недоступных позиций: ${payload.unavailableItemsCount}.`
-            : '';
-        setSuccessMessage(
-          `В корзину добавлено позиций: ${payload.addedItemsCount}.${unavailableNote}`,
-        );
+        if (payload.unavailableItemsCount > 0) {
+          setSuccessMessage(
+            `В корзину добавлено ${payload.addedItemsCount} поз. Недоступно сейчас: ${payload.unavailableItemsCount}.`,
+          );
+          return;
+        }
+
+        setSuccessMessage(`В корзину добавлено ${payload.addedItemsCount} поз.`);
       } catch {
         setErrorMessage('Сетевая ошибка при повторе заказа.');
       }
@@ -77,25 +87,29 @@ export function OrderRepeatAction({ orderId }: OrderRepeatActionProps) {
   };
 
   return (
-    <div className={styles.inlineActionBlock}>
+    <div className={styles.inlineActionStack}>
       <button
         type="button"
-        className={classNames(styles.secondaryButton, styles.actionButtonReset)}
+        className={styles.secondaryButton}
         onClick={handleClick}
         disabled={isPending}
       >
-        {isPending ? 'Добавляем в корзину...' : 'Повторить заказ'}
+        {isPending ? 'Повторяем...' : 'Повторить заказ'}
       </button>
+
+      <Link href="/cart" className={styles.secondaryInlineLink}>
+        Открыть корзину
+      </Link>
+
       {successMessage ? (
-        <div className={styles.inlineActionStack}>
-          <p className={classNames(styles.inlineActionMessage, styles.inlineActionMessageSuccess)}>{successMessage}</p>
-          <Link href="/cart" className={styles.secondaryInlineLink}>
-            Открыть корзину
-          </Link>
-        </div>
+        <p className={classNames(styles.inlineActionMessage, styles.inlineActionMessageSuccess)}>
+          {successMessage}
+        </p>
       ) : null}
       {errorMessage ? (
-        <p className={classNames(styles.inlineActionMessage, styles.inlineActionMessageError)}>{errorMessage}</p>
+        <p className={classNames(styles.inlineActionMessage, styles.inlineActionMessageError)}>
+          {errorMessage}
+        </p>
       ) : null}
     </div>
   );

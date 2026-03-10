@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { useTelegramUnauthorizedMessage } from '@/components/auth/TelegramSessionBootstrap';
 import { classNames } from '@/css/classnames';
 
 import styles from './store.module.css';
@@ -12,9 +13,9 @@ interface CartItemControlsProps {
   quantity: number;
 }
 
-function mapCartError(error: string): string {
+function mapCartError(error: string, unauthorizedMessage: string): string {
   if (error === 'unauthorized') {
-    return 'Откройте MainStore в Telegram, чтобы управлять корзиной.';
+    return unauthorizedMessage;
   }
   if (error === 'not_configured') {
     return 'Корзина временно недоступна.';
@@ -24,6 +25,9 @@ function mapCartError(error: string): string {
 
 export function CartItemControls({ itemId, quantity }: CartItemControlsProps) {
   const router = useRouter();
+  const unauthorizedMessage = useTelegramUnauthorizedMessage(
+    'Откройте MainStore в Telegram, чтобы управлять корзиной.',
+  );
   const [isPending, startTransition] = useTransition();
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -55,7 +59,10 @@ export function CartItemControls({ itemId, quantity }: CartItemControlsProps) {
 
         if (!response.ok || !payload || !payload.ok) {
           setStatusMessage(
-            mapCartError(payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown'),
+            mapCartError(
+              payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown',
+              unauthorizedMessage,
+            ),
           );
           setIsError(true);
           return;
@@ -97,7 +104,10 @@ export function CartItemControls({ itemId, quantity }: CartItemControlsProps) {
 
         if (!response.ok || !payload || !payload.ok) {
           setStatusMessage(
-            mapCartError(payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown'),
+            mapCartError(
+              payload && !payload.ok ? payload.error ?? 'unknown' : 'unknown',
+              unauthorizedMessage,
+            ),
           );
           setIsError(true);
           return;

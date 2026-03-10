@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { TelegramSessionRequiredState } from '@/components/auth/TelegramSessionRequiredState';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
@@ -125,11 +126,12 @@ export default async function OrdersPage() {
       ) : null}
 
       {isSessionMissing ? (
-        <StoreEmptyState
-          title="Нужна сессия Telegram"
-          description="Откройте MainStore в Telegram, чтобы увидеть историю заказов."
-          actionLabel="Открыть каталог"
-          actionHref="/catalog"
+        <TelegramSessionRequiredState
+          fallbackTitle="Нужна сессия Telegram"
+          fallbackDescription="Откройте MainStore в Telegram, чтобы увидеть историю заказов."
+          fallbackActionLabel="Открыть каталог"
+          fallbackActionHref="/catalog"
+          retryHref="/orders"
         />
       ) : null}
 
