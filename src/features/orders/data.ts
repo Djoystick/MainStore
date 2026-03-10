@@ -189,7 +189,7 @@ function selectPrimaryImage(images: ProductImageRow[]): ProductImageRow | null {
 
 function toPublicDataErrorMessage(baseMessage: string, details: string): string {
   if (process.env.NODE_ENV === 'development') {
-    return `${baseMessage} Details: ${details}`;
+    return `${baseMessage} Подробности: ${details}`;
   }
   return baseMessage;
 }
@@ -215,7 +215,7 @@ export async function placeOrderFromCartForProfile(
     return {
       status: 'not_configured',
       message: toPublicDataErrorMessage(
-        'Checkout is temporarily unavailable.',
+        'Оформление заказа временно недоступно.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -390,8 +390,8 @@ export async function placeOrderFromCartForProfile(
     return {
       status: mapOrderCreationError(error instanceof Error ? error.message : 'unknown_checkout_error'),
       message: toPublicDataErrorMessage(
-        'Could not place order right now.',
-        error instanceof Error ? error.message : 'Unknown checkout error.',
+        'Сейчас не удалось оформить заказ.',
+        error instanceof Error ? error.message : 'Неизвестная ошибка оформления.',
       ),
     };
   }
@@ -417,7 +417,7 @@ export async function getOrdersForProfile(
       totalOrders: 0,
       inProgressOrders: 0,
       message: toPublicDataErrorMessage(
-        'Orders are temporarily unavailable.',
+        'Заказы временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -436,7 +436,7 @@ export async function getOrdersForProfile(
       totalOrders: 0,
       inProgressOrders: 0,
       message: toPublicDataErrorMessage(
-        'Could not load orders right now.',
+        'Сейчас не удалось загрузить заказы.',
         ordersResult.error.message,
       ),
     };
@@ -468,7 +468,7 @@ export async function getOrdersForProfile(
       totalOrders: 0,
       inProgressOrders: 0,
       message: toPublicDataErrorMessage(
-        'Could not load order items right now.',
+        'Сейчас не удалось загрузить позиции заказа.',
         itemsResult.error.message,
       ),
     };
@@ -522,7 +522,7 @@ export async function getOrderDetailForProfile(
       status: 'not_configured',
       order: null,
       message: toPublicDataErrorMessage(
-        'Order details are temporarily unavailable.',
+        'Детали заказа временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -542,7 +542,7 @@ export async function getOrderDetailForProfile(
       status: 'error',
       order: null,
       message: toPublicDataErrorMessage(
-        'Could not load order details right now.',
+        'Сейчас не удалось загрузить детали заказа.',
         orderResult.error.message,
       ),
     };
@@ -583,7 +583,7 @@ export async function getOrderDetailForProfile(
       status: 'error',
       order: null,
       message: toPublicDataErrorMessage(
-        'Could not load order items right now.',
+        'Сейчас не удалось загрузить позиции заказа.',
         itemsResult.error.message,
       ),
     };

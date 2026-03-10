@@ -21,7 +21,7 @@ interface AdminDiscountsResult {
 
 function toPublicDataErrorMessage(baseMessage: string, details: string): string {
   if (process.env.NODE_ENV === 'development') {
-    return `${baseMessage} Details: ${details}`;
+    return `${baseMessage} Подробности: ${details}`;
   }
   return baseMessage;
 }
@@ -48,7 +48,7 @@ export async function getAdminDiscounts(): Promise<AdminDiscountsResult> {
       status: 'not_configured',
       discounts: [],
       message: toPublicDataErrorMessage(
-        'Admin discounts are temporarily unavailable.',
+        'Скидки в админке временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -64,7 +64,7 @@ export async function getAdminDiscounts(): Promise<AdminDiscountsResult> {
       status: 'error',
       discounts: [],
       message: toPublicDataErrorMessage(
-        'Could not load discounts right now.',
+        'Сейчас не удалось загрузить скидки.',
         discountsResult.error.message,
       ),
     };
@@ -98,11 +98,11 @@ export async function getAdminDiscounts(): Promise<AdminDiscountsResult> {
       status: 'error',
       discounts: [],
       message: toPublicDataErrorMessage(
-        'Could not load discount targets right now.',
+        'Сейчас не удалось загрузить привязки скидок.',
         productsResult.error?.message ??
           categoriesResult.error?.message ??
           collectionsResult.error?.message ??
-          'Unknown discount target error.',
+          'Неизвестная ошибка при загрузке привязок скидок.',
       ),
     };
   }
@@ -124,7 +124,7 @@ export async function getAdminDiscounts(): Promise<AdminDiscountsResult> {
       id: row.id,
       scope: row.scope,
       targetId: row.target_id,
-      targetTitle: targetTitles.get(row.target_id) ?? 'Missing target',
+      targetTitle: targetTitles.get(row.target_id) ?? 'Связь не найдена',
       title: row.title,
       type: row.type,
       value: Number(row.value) || 0,

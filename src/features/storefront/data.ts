@@ -55,34 +55,34 @@ const fallbackGradients = [
 ];
 
 const fallbackCategories: StorefrontCategory[] = [
-  { id: 'all', slug: 'all', title: 'All' },
-  { id: 'essentials', slug: 'essentials', title: 'Essentials' },
-  { id: 'home', slug: 'home', title: 'Home' },
-  { id: 'tech', slug: 'tech', title: 'Tech' },
+  { id: 'all', slug: 'all', title: 'Все' },
+  { id: 'essentials', slug: 'essentials', title: 'База' },
+  { id: 'home', slug: 'home', title: 'Дом' },
+  { id: 'tech', slug: 'tech', title: 'Техника' },
 ];
 
 const fallbackCollectionDefinitions = [
   {
     id: 'fallback-featured',
     slug: 'featured',
-    title: 'Featured picks',
-    description: 'Top products to start with.',
+    title: 'Рекомендуемое',
+    description: 'Подборка товаров, с которых удобно начать.',
     start: 0,
     size: 4,
   },
   {
     id: 'fallback-fresh',
     slug: 'fresh-drops',
-    title: 'Fresh drops',
-    description: 'Recently added products you can grab now.',
+    title: 'Новые поступления',
+    description: 'Свежие позиции, которые уже доступны к заказу.',
     start: 2,
     size: 4,
   },
   {
     id: 'fallback-daily',
     slug: 'daily-setup',
-    title: 'Daily setup',
-    description: 'Balanced essentials for work and home.',
+    title: 'На каждый день',
+    description: 'Сбалансированная подборка для дома и повседневных задач.',
     start: 1,
     size: 4,
   },
@@ -90,7 +90,7 @@ const fallbackCollectionDefinitions = [
 
 function withDevDetails(message: string, details: string): string {
   if (process.env.NODE_ENV === 'development') {
-    return `${message} Details: ${details}`;
+    return `${message} Подробности: ${details}`;
   }
 
   return message;
@@ -119,7 +119,7 @@ function buildGradient(seed: string): string {
 function buildLabel(title: string): string {
   const words = title.split(' ').filter(Boolean);
   if (words.length === 0) {
-    return 'Product';
+    return 'Товар';
   }
   return words.slice(0, 2).join(' ');
 }
@@ -182,7 +182,7 @@ async function mapProductRows(
       description:
         row.short_description ||
         row.description ||
-        'Product description will be available soon.',
+        'Описание товара скоро появится.',
       basePriceCents: toPriceCents(basePrice),
       priceCents: toPriceCents(effectivePrice),
       compareAtPriceCents: compareAtPrice !== null ? toPriceCents(compareAtPrice) : null,
@@ -430,7 +430,7 @@ async function fetchActiveCategories(): Promise<StorefrontCategory[]> {
   }
 
   return [
-    { id: 'all', slug: 'all', title: 'All' },
+    { id: 'all', slug: 'all', title: 'Все' },
     ...(data as Array<Pick<CategoryRow, 'id' | 'slug' | 'title' | 'description' | 'metadata'>>)
       .sort((left, right) => {
         const leftMeta = parseTaxonomyMetadata(left.metadata);
@@ -516,7 +516,7 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       collections,
       promoBanners: buildStorefrontPromoBanners(fallbackProducts, categories),
       message:
-        'Store data source is not configured yet. Showing a safe local storefront preview.',
+        'Источник данных магазина пока не настроен. Показываем безопасный локальный превью-режим витрины.',
     };
   }
 
@@ -533,7 +533,7 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       collections,
       promoBanners: buildStorefrontPromoBanners(fallbackProducts, categories),
       message: withDevDetails(
-        'Store data is temporarily unavailable. Showing a safe local storefront preview.',
+        'Данные магазина временно недоступны. Показываем безопасный локальный превью-режим витрины.',
         activeProductsResult.message,
       ),
     };
@@ -551,7 +551,7 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       categories,
       collections: [],
       promoBanners,
-      message: 'No active products yet. Publish products in admin to fill the storefront.',
+      message: 'Пока нет активных товаров. Опубликуйте товары в админке, чтобы заполнить витрину.',
     };
   }
 
@@ -602,7 +602,7 @@ export async function getCatalogStorefrontData(): Promise<CatalogStorefrontDataR
       collections: buildFallbackCollections(fallbackProducts),
       promoBanners: buildStorefrontPromoBanners(fallbackProducts, categories),
       message:
-        'Store data source is not configured yet. Showing a safe local catalog preview.',
+        'Источник данных магазина пока не настроен. Показываем безопасный локальный превью-режим каталога.',
     };
   }
 
@@ -616,7 +616,7 @@ export async function getCatalogStorefrontData(): Promise<CatalogStorefrontDataR
       collections: buildFallbackCollections(fallbackProducts),
       promoBanners: buildStorefrontPromoBanners(fallbackProducts, categories),
       message: withDevDetails(
-        'Catalog data is temporarily unavailable. Showing a safe local preview.',
+        'Данные каталога временно недоступны. Показываем безопасный локальный превью-режим.',
         activeProductsResult.message,
       ),
     };
@@ -632,7 +632,7 @@ export async function getCatalogStorefrontData(): Promise<CatalogStorefrontDataR
       categories,
       collections: [],
       promoBanners,
-      message: 'No active products available yet.',
+      message: 'Активных товаров пока нет.',
     };
   }
 
@@ -665,7 +665,7 @@ const getProductStorefrontDataUncached = async (
         status: 'not_found',
         product: null,
         relatedProducts: [],
-        message: 'Product is unavailable right now.',
+        message: 'Товар сейчас недоступен.',
       };
     }
 
@@ -676,7 +676,7 @@ const getProductStorefrontDataUncached = async (
         .filter((item) => item.id !== fallbackProduct.id)
         .slice(0, 3),
       message:
-        'Product data source is not configured yet. Showing a safe local preview of this item.',
+        'Источник данных товара пока не настроен. Показываем безопасный локальный превью-режим этой позиции.',
     };
   }
 
@@ -718,7 +718,7 @@ const getProductStorefrontDataUncached = async (
         status: 'not_found',
         product: null,
         relatedProducts: [],
-        message: 'This product is unavailable or no longer active.',
+        message: 'Товар недоступен или больше не активен.',
       };
     }
 
@@ -823,10 +823,10 @@ const getProductStorefrontDataUncached = async (
       message:
         error instanceof Error
           ? withDevDetails(
-              'Product details are temporarily unavailable. Showing a safe local preview.',
+              'Детали товара временно недоступны. Показываем безопасный локальный превью-режим.',
               error.message,
             )
-          : 'Product details are temporarily unavailable. Showing a safe local preview.',
+          : 'Детали товара временно недоступны. Показываем безопасный локальный превью-режим.',
     };
   }
 };

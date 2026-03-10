@@ -42,7 +42,7 @@ function buildGradient(seed: string): string {
 
 function buildLabel(title: string): string {
   const words = title.split(' ').filter(Boolean);
-  return words.length > 0 ? words.slice(0, 2).join(' ') : 'Product';
+  return words.length > 0 ? words.slice(0, 2).join(' ') : 'Товар';
 }
 
 function isDuplicateConstraintError(message: string | undefined): boolean {
@@ -58,7 +58,7 @@ function isDuplicateConstraintError(message: string | undefined): boolean {
 
 function toPublicDataErrorMessage(baseMessage: string, details: string): string {
   if (process.env.NODE_ENV === 'development') {
-    return `${baseMessage} Details: ${details}`;
+    return `${baseMessage} Подробности: ${details}`;
   }
   return baseMessage;
 }
@@ -115,7 +115,7 @@ async function mapProducts(
       description:
         row.short_description ||
         row.description ||
-        'Product description will be available soon.',
+        'Описание товара скоро появится.',
       basePriceCents: toPriceCents(basePrice),
       priceCents: toPriceCents(effectivePrice),
       compareAtPriceCents: compareAtPrice !== null ? toPriceCents(compareAtPrice) : null,
@@ -225,7 +225,7 @@ export async function getFavoriteProductsForProfile(
       status: 'not_configured',
       products: [],
       message: toPublicDataErrorMessage(
-        'Favorites are temporarily unavailable.',
+        'Избранное временно недоступно.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -242,7 +242,7 @@ export async function getFavoriteProductsForProfile(
       status: 'error',
       products: [],
       message: toPublicDataErrorMessage(
-        'Could not load favorites right now.',
+        'Сейчас не удалось загрузить избранное.',
         favoritesResult.error.message,
       ),
     };
@@ -365,7 +365,7 @@ export async function getCartDataForProfile(
       subtotalCents: 0,
       discountTotalCents: 0,
       message: toPublicDataErrorMessage(
-        'Cart is temporarily unavailable.',
+        'Корзина временно недоступна.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -386,7 +386,7 @@ export async function getCartDataForProfile(
       subtotalCents: 0,
       discountTotalCents: 0,
       message: toPublicDataErrorMessage(
-        'Could not load cart right now.',
+        'Сейчас не удалось загрузить корзину.',
         cartItemsResult.error.message,
       ),
     };

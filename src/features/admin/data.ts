@@ -37,7 +37,7 @@ interface AdminResultBase {
 
 function toPublicDataErrorMessage(baseMessage: string, details: string): string {
   if (process.env.NODE_ENV === 'development') {
-    return `${baseMessage} Details: ${details}`;
+    return `${baseMessage} Подробности: ${details}`;
   }
   return baseMessage;
 }
@@ -283,7 +283,7 @@ export async function getAdminCategories(): Promise<AdminCategoriesResult> {
       status: 'not_configured',
       categories: [],
       message: toPublicDataErrorMessage(
-        'Admin categories are temporarily unavailable.',
+        'Категории в админке временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -299,7 +299,7 @@ export async function getAdminCategories(): Promise<AdminCategoriesResult> {
       status: 'error',
       categories: [],
       message: toPublicDataErrorMessage(
-        'Could not load categories right now.',
+        'Сейчас не удалось загрузить категории.',
         categoriesResult.error.message,
       ),
     };
@@ -310,7 +310,7 @@ export async function getAdminCategories(): Promise<AdminCategoriesResult> {
       status: 'error',
       categories: [],
       message: toPublicDataErrorMessage(
-        'Could not load category usage right now.',
+        'Сейчас не удалось загрузить использование категорий.',
         productsResult.error.message,
       ),
     };
@@ -343,7 +343,7 @@ export async function getAdminCollections(): Promise<AdminCollectionsResult> {
       status: 'not_configured',
       collections: [],
       message: toPublicDataErrorMessage(
-        'Admin collections are temporarily unavailable.',
+        'Подборки в админке временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -359,7 +359,7 @@ export async function getAdminCollections(): Promise<AdminCollectionsResult> {
       status: 'error',
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load collections right now.',
+        'Сейчас не удалось загрузить подборки.',
         collectionsResult.error.message,
       ),
     };
@@ -370,7 +370,7 @@ export async function getAdminCollections(): Promise<AdminCollectionsResult> {
       status: 'error',
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load collection usage right now.',
+        'Сейчас не удалось загрузить использование подборок.',
         collectionItemsResult.error.message,
       ),
     };
@@ -402,7 +402,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
       status: 'not_configured',
       dashboard: null,
       message: toPublicDataErrorMessage(
-        'Admin dashboard is temporarily unavailable.',
+        'Панель администрирования временно недоступна.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -418,7 +418,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
       status: 'error',
       dashboard: null,
       message: toPublicDataErrorMessage(
-        'Could not load dashboard products right now.',
+        'Сейчас не удалось загрузить товары для панели.',
         productsResult.error.message,
       ),
     };
@@ -429,7 +429,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
       status: 'error',
       dashboard: null,
       message: toPublicDataErrorMessage(
-        'Could not load dashboard orders right now.',
+        'Сейчас не удалось загрузить заказы для панели.',
         ordersResult.error.message,
       ),
     };
@@ -461,7 +461,7 @@ export async function getAdminProducts(): Promise<AdminProductsResult> {
       products: [],
       categories: [],
       message: toPublicDataErrorMessage(
-        'Admin products are temporarily unavailable.',
+        'Товары в админке временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -478,7 +478,7 @@ export async function getAdminProducts(): Promise<AdminProductsResult> {
       products: [],
       categories: [],
       message: toPublicDataErrorMessage(
-        'Could not load products right now.',
+        'Сейчас не удалось загрузить товары.',
         productsResult.error.message,
       ),
     };
@@ -490,7 +490,7 @@ export async function getAdminProducts(): Promise<AdminProductsResult> {
       products: [],
       categories: [],
       message: toPublicDataErrorMessage(
-        'Could not load product categories right now.',
+        'Сейчас не удалось загрузить категории товаров.',
         categoriesResult.error.message,
       ),
     };
@@ -512,7 +512,7 @@ export async function getAdminProducts(): Promise<AdminProductsResult> {
         products: [],
         categories: [],
         message: toPublicDataErrorMessage(
-          'Could not load product images right now.',
+          'Сейчас не удалось загрузить изображения товаров.',
           imagesResult.error.message,
         ),
       };
@@ -546,7 +546,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Admin product details are temporarily unavailable.',
+        'Карточка товара в админке временно недоступна.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -570,7 +570,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load product details right now.',
+        'Сейчас не удалось загрузить карточку товара.',
         productResult.error.message,
       ),
     };
@@ -583,7 +583,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load categories right now.',
+        'Сейчас не удалось загрузить категории.',
         categoriesResult.error.message,
       ),
     };
@@ -596,7 +596,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load collections right now.',
+        'Сейчас не удалось загрузить подборки.',
         collectionsResult.error.message,
       ),
     };
@@ -609,7 +609,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load product images right now.',
+        'Сейчас не удалось загрузить изображения товара.',
         imagesResult.error.message,
       ),
     };
@@ -659,7 +659,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load product collections right now.',
+        'Сейчас не удалось загрузить подборки товара.',
         collectionItemsResult.error.message,
       ),
     };
@@ -672,7 +672,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load product favorites summary right now.',
+        'Сейчас не удалось загрузить статистику избранного по товару.',
         favoritesCountResult.error.message,
       ),
     };
@@ -685,7 +685,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load product cart summary right now.',
+        'Сейчас не удалось загрузить статистику корзины по товару.',
         cartItemsCountResult.error.message,
       ),
     };
@@ -698,7 +698,7 @@ export async function getAdminProductDetail(
       categories: [],
       collections: [],
       message: toPublicDataErrorMessage(
-        'Could not load product order history summary right now.',
+        'Сейчас не удалось загрузить статистику истории заказов по товару.',
         orderItemsCountResult.error.message,
       ),
     };
@@ -720,7 +720,7 @@ export async function getAdminProductDetail(
         categories: [],
         collections: [],
         message: toPublicDataErrorMessage(
-          'Could not load linked collections right now.',
+          'Сейчас не удалось загрузить связанные подборки.',
           collectionsResult.error.message,
         ),
       };
@@ -787,7 +787,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
       status: 'not_configured',
       orders: [],
       message: toPublicDataErrorMessage(
-        'Admin orders are temporarily unavailable.',
+        'Заказы в админке временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -803,7 +803,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
       status: 'error',
       orders: [],
       message: toPublicDataErrorMessage(
-        'Could not load orders right now.',
+        'Сейчас не удалось загрузить заказы.',
         ordersResult.error.message,
       ),
     };
@@ -839,7 +839,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
       status: 'error',
       orders: [],
       message: toPublicDataErrorMessage(
-        'Could not load order items right now.',
+        'Сейчас не удалось загрузить состав заказов.',
         itemsResult.error.message,
       ),
     };
@@ -850,7 +850,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
       status: 'error',
       orders: [],
       message: toPublicDataErrorMessage(
-        'Could not load order profiles right now.',
+        'Сейчас не удалось загрузить профили покупателей.',
         profilesResult.error.message,
       ),
     };
@@ -898,7 +898,7 @@ export async function getAdminOrderDetail(
       status: 'not_configured',
       order: null,
       message: toPublicDataErrorMessage(
-        'Admin order details are temporarily unavailable.',
+        'Детали заказа в админке временно недоступны.',
         getSupabaseAdminMissingEnvMessage(),
       ),
     };
@@ -918,7 +918,7 @@ export async function getAdminOrderDetail(
       status: 'error',
       order: null,
       message: toPublicDataErrorMessage(
-        'Could not load order details right now.',
+        'Сейчас не удалось загрузить детали заказа.',
         orderResult.error.message,
       ),
     };
@@ -929,7 +929,7 @@ export async function getAdminOrderDetail(
       status: 'error',
       order: null,
       message: toPublicDataErrorMessage(
-        'Could not load order items right now.',
+        'Сейчас не удалось загрузить позиции заказа.',
         orderItemsResult.error.message,
       ),
     };

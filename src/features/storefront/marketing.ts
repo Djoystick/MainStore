@@ -25,21 +25,21 @@ export function buildStorefrontPromoBanners(
   return [
     {
       id: 'weekly-pick',
-      eyebrow: 'Weekly pick',
-      title: heroProduct ? heroProduct.title : 'MainStore selection',
+      eyebrow: 'Выбор недели',
+      title: heroProduct ? heroProduct.title : 'Подборка MainStore',
       description: heroProduct
-        ? `Fast shipping and clean essentials. Explore ${heroProduct.title.toLowerCase()} now.`
-        : 'Fast shipping and clean essentials selected by the MainStore team.',
-      ctaLabel: heroProduct ? 'Open product' : 'Open catalog',
+        ? `Быстрая доставка и продуманная база для повседневных покупок. Посмотрите ${heroProduct.title.toLowerCase()} прямо сейчас.`
+        : 'Быстрая доставка и аккуратно подобранные товары от команды MainStore.',
+      ctaLabel: heroProduct ? 'Открыть товар' : 'Открыть каталог',
       ctaHref: heroProduct ? `/products/${heroProduct.slug}` : '/catalog',
     },
     {
       id: 'category-entry',
-      eyebrow: 'Curated flow',
-      title: firstCategory ? `${firstCategory.title} highlights` : 'Curated highlights',
+      eyebrow: 'Удобный старт',
+      title: firstCategory ? `${firstCategory.title}: главное` : 'Главные подборки',
       description:
-        'Use category and collection shortcuts to find the right products in a couple of taps.',
-      ctaLabel: firstCategory ? 'Shop category' : 'Browse catalog',
+        'Используйте быстрые переходы по категориям и подборкам, чтобы найти нужные товары за пару касаний.',
+      ctaLabel: firstCategory ? 'Открыть категорию' : 'Смотреть каталог',
       ctaHref: firstCategory ? `/catalog?category=${firstCategory.slug}` : '/catalog',
     },
   ];
