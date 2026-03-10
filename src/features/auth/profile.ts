@@ -2,7 +2,10 @@ import 'server-only';
 
 import { createHash } from 'node:crypto';
 
-import { createSupabaseAdminClientOptional } from '@/lib/supabase';
+import {
+  createSupabaseAdminClientOptional,
+  getSupabaseAdminMissingEnvMessage,
+} from '@/lib/supabase';
 import type { Database } from '@/types/db';
 
 import type { AppSession, CurrentProfile, TelegramIdentity } from './types';
@@ -50,7 +53,11 @@ export async function upsertProfileFromTelegramIdentity(
 ): Promise<UpsertTelegramProfileResult> {
   const adminClient = createSupabaseAdminClientOptional();
   if (!adminClient) {
-    return { ok: false, reason: 'supabase_service_role_missing' };
+    return {
+      ok: false,
+      reason: 'supabase_admin_unavailable',
+      details: [getSupabaseAdminMissingEnvMessage()],
+    };
   }
 
   const telegramUserId = user.id;
@@ -162,6 +169,12 @@ export async function getProfileBySession(
 
   const adminClient = createSupabaseAdminClientOptional();
   if (!adminClient) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[MainStore] Falling back to session-only profile because Supabase admin client is unavailable.', {
+        profileId: session.profileId,
+      });
+    }
+
     return {
       id: session.profileId,
       role: session.role,
@@ -179,6 +192,13 @@ export async function getProfileBySession(
     .maybeSingle();
 
   if (result.error || !result.data) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[MainStore] Falling back to session-only profile because persisted profile is unavailable.', {
+        profileId: session.profileId,
+        reason: result.error?.message ?? 'profile_not_found',
+      });
+    }
+
     return {
       id: session.profileId,
       role: session.role,

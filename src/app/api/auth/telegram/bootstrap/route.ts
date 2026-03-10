@@ -64,9 +64,9 @@ export async function POST(request: Request) {
   const upsertResult = await upsertProfileFromTelegramIdentity(verification.user);
   if (!upsertResult.ok) {
     const statusCode =
-      upsertResult.reason === 'supabase_service_role_missing' ? 503 : 500;
+      upsertResult.reason === 'supabase_admin_unavailable' ? 503 : 500;
     const details =
-      upsertResult.reason === 'supabase_service_role_missing'
+      upsertResult.reason === 'supabase_admin_unavailable'
         ? [getSupabaseAdminMissingEnvMessage()]
         : upsertResult.details;
 
