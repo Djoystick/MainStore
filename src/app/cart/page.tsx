@@ -1,38 +1,121 @@
+import Link from 'next/link';
+
+import { CartItemControls } from '@/components/store/CartItemControls';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
+import { formatStorePrice } from '@/components/store/formatPrice';
+import { classNames } from '@/css/classnames';
+import { getCurrentUserContext } from '@/features/auth';
+import { getCartDataForProfile } from '@/features/user-store/data';
 import styles from '@/components/store/store.module.css';
 
-export default function CartPage() {
+function buildImageStyle(imageUrl: string | null | undefined, gradient: string) {
+  if (imageUrl) {
+    return {
+      backgroundImage: `linear-gradient(rgba(12, 18, 31, 0.14), rgba(12, 18, 31, 0.14)), url(${imageUrl})`,
+      backgroundPosition: 'center',
+      backgroundSize: 'cover',
+    };
+  }
+
+  return { background: gradient };
+}
+
+export default async function CartPage() {
+  const { profile } = await getCurrentUserContext();
+  const cartData = await getCartDataForProfile(profile?.id ?? null);
+  const isSessionMissing = cartData.status === 'unauthorized';
+  const isEmpty = cartData.status === 'ok' && cartData.items.length === 0;
+  const subtotalLabel = cartData.items[0]
+    ? formatStorePrice(cartData.subtotalCents, cartData.items[0].product.currency)
+    : '$0';
+
   return (
     <StoreScreen title="Cart" subtitle="Your selected products will appear here">
+      {cartData.message && (
+        <section
+          className={classNames(
+            styles.dataNotice,
+            cartData.status === 'error' && styles.dataNoticeError,
+          )}
+        >
+          <p className={styles.dataNoticeTitle}>Cart status</p>
+          <p className={styles.dataNoticeText}>{cartData.message}</p>
+        </section>
+      )}
+
       <StoreSection title="Summary">
         <div className={styles.infoGrid}>
           <div className={styles.infoItem}>
             <p className={styles.infoLabel}>Items</p>
-            <p className={styles.infoValue}>0</p>
+            <p className={styles.infoValue}>{cartData.itemCount}</p>
           </div>
           <div className={styles.infoItem}>
-            <p className={styles.infoLabel}>Estimated total</p>
-            <p className={styles.infoValue}>$0</p>
+            <p className={styles.infoLabel}>Subtotal</p>
+            <p className={styles.infoValue}>{subtotalLabel}</p>
           </div>
         </div>
       </StoreSection>
 
+      {isSessionMissing ? (
+        <StoreEmptyState
+          title="Cart needs Telegram session"
+          description="Open MainStore inside Telegram to use your personal cart."
+          actionLabel="Browse catalog"
+          actionHref="/catalog"
+        />
+      ) : null}
+
+      {isEmpty ? (
+        <StoreEmptyState
+          title="Your cart is empty"
+          description="Add products from catalog, then return here to adjust quantities."
+          actionLabel="Go to catalog"
+          actionHref="/catalog"
+        />
+      ) : null}
+
+      {cartData.items.length > 0 && (
+        <StoreSection title="Items in cart">
+          <div className={styles.cartList}>
+            {cartData.items.map((item) => (
+              <article key={item.id} className={styles.cartItem}>
+                <Link
+                  href={`/products/${item.product.slug}`}
+                  className={styles.cartItemPreview}
+                  aria-label={`Open ${item.product.title}`}
+                >
+                  <div
+                    className={styles.cartItemImage}
+                    style={buildImageStyle(item.product.imageUrl, item.product.imageGradient)}
+                  >
+                    <span className={styles.productImageLabel}>{item.product.imageLabel}</span>
+                  </div>
+                  <div className={styles.cartItemMeta}>
+                    <p className={styles.cartItemTitle}>{item.product.title}</p>
+                    <p className={styles.cartItemPrice}>
+                      {formatStorePrice(item.product.priceCents, item.product.currency)}
+                    </p>
+                    <p className={styles.cartItemLineTotal}>
+                      Line total: {formatStorePrice(item.lineTotalCents, item.product.currency)}
+                    </p>
+                  </div>
+                </Link>
+
+                <CartItemControls itemId={item.id} quantity={item.quantity} />
+              </article>
+            ))}
+          </div>
+        </StoreSection>
+      )}
+
       <section className={styles.panel}>
-        <h2 className={styles.panelTitle}>Checkout readiness</h2>
+        <h2 className={styles.panelTitle}>Checkout is the next stage</h2>
         <p className={styles.panelText}>
-          Delivery methods, promo codes, and payment confirmation will be added
-          with backend integration.
+          Delivery options and payment flow are intentionally not connected yet.
         </p>
       </section>
-
-      <StoreEmptyState
-        title="Your cart is empty"
-        description="Add products from catalog. Quantity updates and checkout actions will be wired in the next stage."
-        actionLabel="Go to catalog"
-        actionHref="/catalog"
-      />
     </StoreScreen>
   );
 }

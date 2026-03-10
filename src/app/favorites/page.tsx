@@ -1,33 +1,65 @@
 import { ProductCard } from '@/components/store/ProductCard';
+import { FavoriteToggleButton } from '@/components/store/FavoriteToggleButton';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
-import { storeProducts } from '@/components/store/mock-products';
+import { classNames } from '@/css/classnames';
+import { getCurrentUserContext } from '@/features/auth';
+import { getFavoriteProductsForProfile } from '@/features/user-store/data';
 import styles from '@/components/store/store.module.css';
 
-const favoriteSamples = storeProducts.slice(1, 4);
+export default async function FavoritesPage() {
+  const { profile } = await getCurrentUserContext();
+  const favoritesData = await getFavoriteProductsForProfile(profile?.id ?? null);
+  const isSessionMissing = favoritesData.status === 'unauthorized';
+  const hasProducts = favoritesData.products.length > 0;
 
-export default function FavoritesPage() {
   return (
     <StoreScreen title="Favorites" subtitle="Save products for later">
-      <StoreSection title="Saved picks">
-        <div className={styles.catalogGrid}>
-          {favoriteSamples.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              href={`/products/${product.slug}`}
-            />
-          ))}
-        </div>
-      </StoreSection>
+      {favoritesData.message && (
+        <section
+          className={classNames(
+            styles.dataNotice,
+            favoritesData.status === 'error' && styles.dataNoticeError,
+          )}
+        >
+          <p className={styles.dataNoticeTitle}>Favorites status</p>
+          <p className={styles.dataNoticeText}>{favoritesData.message}</p>
+        </section>
+      )}
 
-      <StoreEmptyState
-        title="Favorites are placeholder-only"
-        description="Real save/remove behavior will be added with user data integration."
-        actionLabel="Explore catalog"
-        actionHref="/catalog"
-      />
+      {isSessionMissing ? (
+        <StoreEmptyState
+          title="Favorites need Telegram session"
+          description="Open MainStore inside Telegram to use personal favorites."
+          actionLabel="Open catalog"
+          actionHref="/catalog"
+        />
+      ) : (
+        <StoreSection title="Saved picks">
+          {hasProducts ? (
+            <div className={styles.catalogGrid}>
+              {favoritesData.products.map((product) => (
+                <div key={product.id} className={styles.productCardStack}>
+                  <ProductCard product={product} href={`/products/${product.slug}`} />
+                  <FavoriteToggleButton
+                    productId={product.id}
+                    initialFavorited={true}
+                    compact
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <StoreEmptyState
+              title="Favorites are empty"
+              description="Save products from the product page and they will appear here."
+              actionLabel="Explore catalog"
+              actionHref="/catalog"
+            />
+          )}
+        </StoreSection>
+      )}
     </StoreScreen>
   );
 }

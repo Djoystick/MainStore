@@ -1,9 +1,14 @@
+import { AddToCartButton } from '@/components/store/AddToCartButton';
+import { FavoriteToggleButton } from '@/components/store/FavoriteToggleButton';
 import { ProductCard } from '@/components/store/ProductCard';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
+import { formatStorePrice } from '@/components/store/formatPrice';
 import { classNames } from '@/css/classnames';
+import { getCurrentUserContext } from '@/features/auth';
 import { getProductStorefrontData } from '@/features/storefront/data';
+import { getFavoriteProductIdsForProfile } from '@/features/user-store/data';
 import styles from '@/components/store/store.module.css';
 
 export default async function ProductPage({
@@ -14,13 +19,13 @@ export default async function ProductPage({
   const { productId } = await params;
   const productData = await getProductStorefrontData(productId);
   const product = productData.product;
+  const { profile } = await getCurrentUserContext();
+  const favoriteIds = await getFavoriteProductIdsForProfile(profile?.id ?? null);
+  const favoriteIdSet = new Set(favoriteIds);
+  const isFavorited = product ? favoriteIdSet.has(product.id) : false;
 
   const price = product
-    ? new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: product.currency || 'USD',
-        minimumFractionDigits: 0,
-      }).format(product.priceCents / 100)
+    ? formatStorePrice(product.priceCents, product.currency)
     : '';
 
   const detailImageStyle = product?.imageUrl
@@ -74,6 +79,12 @@ export default async function ProductPage({
                 <h2 className={styles.detailTitle}>{product.title}</h2>
                 <p className={styles.detailPrice}>{price}</p>
                 <p className={styles.detailDescription}>{product.description}</p>
+                <div className={styles.detailActions}>
+                  <FavoriteToggleButton
+                    productId={product.id}
+                    initialFavorited={isFavorited}
+                  />
+                </div>
               </div>
             </section>
 
@@ -95,13 +106,10 @@ export default async function ProductPage({
 
           <div className={styles.stickyBar}>
             <div className={styles.stickyBarInner}>
-              <button
-                type="button"
+              <AddToCartButton
+                productId={product.id}
                 className={styles.stickyBarButton}
-                aria-label={`Add ${product.title} to cart`}
-              >
-                Add to cart
-              </button>
+              />
             </div>
           </div>
         </>

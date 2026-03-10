@@ -269,6 +269,10 @@
   color: var(--store-hint);
 }
 
+.detailActions {
+  margin-top: 14px;
+}
+
 .stickyBar {
   position: fixed;
   left: 0;
@@ -309,6 +313,59 @@
   font-size: 16px;
   line-height: 1;
   font-weight: 700;
+}
+
+.secondaryButton {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--store-border);
+  border-radius: 12px;
+  padding: 0 14px;
+  background: var(--store-surface);
+  color: var(--store-text);
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.secondaryButtonCompact {
+  min-height: 42px;
+}
+
+.secondaryButtonActive {
+  color: var(--store-accent);
+  border-color: rgba(45, 99, 241, 0.35);
+  background: rgba(45, 99, 241, 0.1);
+}
+
+.actionButtonReset {
+  appearance: none;
+  cursor: pointer;
+}
+
+.actionButtonReset:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.inlineActionBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.inlineActionMessage {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.inlineActionMessageSuccess {
+  color: #2d8d59;
+}
+
+.inlineActionMessageError {
+  color: #d24a4a;
 }
 
 .panel {
@@ -461,6 +518,12 @@
   line-height: 1;
   font-weight: 700;
   color: var(--store-accent);
+}
+
+.productCardStack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .emptyState {
@@ -634,6 +697,121 @@
   padding-bottom: calc(80px + var(--tg-safe-area-inset-bottom, 0px));
 }
 
+.cartList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cartItem {
+  border: 1px solid var(--store-border);
+  border-radius: 14px;
+  padding: 10px;
+  background: var(--store-surface);
+}
+
+.cartItemPreview {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.cartItemImage {
+  height: 92px;
+  border-radius: 12px;
+  border: 1px solid var(--store-border);
+  display: flex;
+  align-items: flex-end;
+  padding: 8px;
+}
+
+.cartItemMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cartItemTitle {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.cartItemPrice {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.cartItemLineTotal {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  color: var(--store-hint);
+}
+
+.cartItemControls {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.quantityControl {
+  display: inline-grid;
+  grid-template-columns: repeat(3, auto);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--store-border);
+  border-radius: 10px;
+  padding: 4px;
+  background: var(--store-surface-muted);
+}
+
+.quantityButton {
+  min-width: 36px;
+  min-height: 36px;
+  border: 1px solid var(--store-border);
+  border-radius: 8px;
+  background: var(--store-surface);
+  color: var(--store-text);
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.quantityValue {
+  min-width: 26px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cartRemoveButton {
+  min-height: 38px;
+  border: 1px solid rgba(210, 74, 74, 0.4);
+  border-radius: 10px;
+  padding: 0 12px;
+  background: rgba(210, 74, 74, 0.08);
+  color: #c53f3f;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.cartActionError {
+  margin: 0;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #d24a4a;
+}
+
 .heroButton:focus-visible,
 .sectionAction:focus-visible,
 .productLink:focus-visible,
@@ -644,6 +822,13 @@
 .actionItem:focus-visible,
 .stickyBarButton:focus-visible,
 .primaryButton:focus-visible {
+  outline: 2px solid var(--store-accent);
+  outline-offset: 2px;
+}
+
+.secondaryButton:focus-visible,
+.quantityButton:focus-visible,
+.cartRemoveButton:focus-visible {
   outline: 2px solid var(--store-accent);
   outline-offset: 2px;
 }
@@ -662,6 +847,11 @@
 
   .chipActive {
     background: rgba(76, 126, 255, 0.2);
+  }
+
+  .secondaryButtonActive {
+    background: rgba(76, 126, 255, 0.2);
+    border-color: rgba(76, 126, 255, 0.46);
   }
 
   .bottomNavLinkActive {

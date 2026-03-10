@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { classNames } from '@/css/classnames';
 
+import { formatStorePrice } from './formatPrice';
 import styles from './store.module.css';
 import type { StoreProduct } from './types';
 
@@ -9,14 +10,6 @@ interface ProductCardProps {
   product: StoreProduct;
   href?: string;
   compact?: boolean;
-}
-
-function formatPrice(priceCents: number, currency: string): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency || 'USD',
-    minimumFractionDigits: 0,
-  }).format(priceCents / 100);
 }
 
 export function ProductCard({ product, href, compact = false }: ProductCardProps) {
@@ -41,7 +34,7 @@ export function ProductCard({ product, href, compact = false }: ProductCardProps
           {product.shortDescription || product.description}
         </p>
         <p className={styles.productPrice}>
-          {formatPrice(product.priceCents, product.currency)}
+          {formatStorePrice(product.priceCents, product.currency)}
         </p>
       </div>
     </article>

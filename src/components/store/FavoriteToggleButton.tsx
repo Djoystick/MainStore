@@ -1,0 +1,110 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+
+import { classNames } from '@/css/classnames';
+
+import styles from './store.module.css';
+
+interface FavoriteToggleButtonProps {
+  productId: string;
+  initialFavorited: boolean;
+  compact?: boolean;
+}
+
+function mapFavoriteError(error: string): string {
+  if (error === 'unauthorized') {
+    return 'Open this store in Telegram to use favorites.';
+  }
+  if (error === 'not_configured') {
+    return 'Favorites backend is not configured yet.';
+  }
+  return 'Could not update favorites.';
+}
+
+export function FavoriteToggleButton({
+  productId,
+  initialFavorited,
+  compact = false,
+}: FavoriteToggleButtonProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isFavorited, setIsFavorited] = useState(initialFavorited);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
+
+  const label = useMemo(() => {
+    if (isFavorited) {
+      return compact ? 'Saved' : 'Saved in favorites';
+    }
+    return compact ? 'Save' : 'Add to favorites';
+  }, [compact, isFavorited]);
+
+  const handleToggle = () => {
+    startTransition(async () => {
+      setStatusMessage(null);
+      setIsError(false);
+
+      try {
+        const response = await fetch('/api/store/favorites/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ productId }),
+        });
+
+        const payload = (await response.json()) as
+          | { ok: true; favorited: boolean }
+          | { ok: false; error?: string };
+
+        if (!response.ok || !payload.ok) {
+          const message = mapFavoriteError(payload.ok ? 'unknown' : payload.error ?? 'unknown');
+          setStatusMessage(message);
+          setIsError(true);
+          return;
+        }
+
+        setIsFavorited(payload.favorited);
+        setStatusMessage(payload.favorited ? 'Added to favorites.' : 'Removed from favorites.');
+        setIsError(false);
+        router.refresh();
+      } catch {
+        setStatusMessage('Network error while updating favorites.');
+        setIsError(true);
+      }
+    });
+  };
+
+  return (
+    <div className={styles.inlineActionBlock}>
+      <button
+        type="button"
+        className={classNames(
+          styles.secondaryButton,
+          compact && styles.secondaryButtonCompact,
+          styles.actionButtonReset,
+          isFavorited && styles.secondaryButtonActive,
+        )}
+        onClick={handleToggle}
+        disabled={isPending}
+        aria-pressed={isFavorited}
+        aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+      >
+        {isPending ? 'Saving...' : label}
+      </button>
+      {!compact && statusMessage && (
+        <p
+          className={classNames(
+            styles.inlineActionMessage,
+            isError ? styles.inlineActionMessageError : styles.inlineActionMessageSuccess,
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          {statusMessage}
+        </p>
+      )}
+    </div>
+  );
+}

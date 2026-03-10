@@ -9,6 +9,7 @@ import {
 } from '@tma.js/sdk-react';
 import { AppRoot } from '@telegram-apps/telegram-ui';
 
+import { TelegramSessionBootstrap } from '@/components/auth/TelegramSessionBootstrap';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ErrorPage } from '@/components/ErrorPage';
 import { useDidMount } from '@/hooks/useDidMount';
@@ -34,6 +35,7 @@ function RootInner({ children }: PropsWithChildren) {
       appearance={isDark ? 'dark' : 'light'}
       platform={['macos', 'ios'].includes(lp.tgWebAppPlatform) ? 'ios' : 'base'}
     >
+      <TelegramSessionBootstrap />
       {children}
     </AppRoot>
   );
