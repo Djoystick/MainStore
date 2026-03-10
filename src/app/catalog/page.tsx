@@ -12,6 +12,7 @@ function normalizeQueryValue(value: string | string[] | undefined): string {
   if (Array.isArray(value)) {
     return (value[0] ?? '').trim();
   }
+
   return (value ?? '').trim();
 }
 
@@ -25,6 +26,7 @@ function buildCatalogHref({
   collection?: string;
 }): string {
   const params = new URLSearchParams();
+
   if (query) {
     params.set('q', query);
   }
@@ -50,21 +52,13 @@ export default async function CatalogPage({
   const searchQuery = searchQueryRaw.toLowerCase();
   const selectedCategorySlug = normalizeQueryValue(params.category);
   const selectedCollectionSlug = normalizeQueryValue(params.collection);
-  const selectedCategory = catalogData.categories.find(
-    (category) => category.slug === selectedCategorySlug,
-  );
-  const selectedCollection = catalogData.collections.find(
-    (collection) => collection.slug === selectedCollectionSlug,
-  );
-  const collectionProductIdSet = new Set(
-    selectedCollection?.products.map((product) => product.id) ?? [],
-  );
+  const selectedCategory = catalogData.categories.find((category) => category.slug === selectedCategorySlug);
+  const selectedCollection = catalogData.collections.find((collection) => collection.slug === selectedCollectionSlug);
+  const collectionProductIdSet = new Set(selectedCollection?.products.map((product) => product.id) ?? []);
 
   const filteredProducts = catalogData.products.filter((product) => {
-    if (selectedCategory && selectedCategory.id !== 'all') {
-      if (product.categoryId !== selectedCategory.id) {
-        return false;
-      }
+    if (selectedCategory && selectedCategory.id !== 'all' && product.categoryId !== selectedCategory.id) {
+      return false;
     }
 
     if (selectedCollection && !collectionProductIdSet.has(product.id)) {
@@ -75,20 +69,14 @@ export default async function CatalogPage({
       return true;
     }
 
-    const searchableText = [
-      product.title,
-      product.shortDescription ?? '',
-      product.description,
-    ]
+    const searchableText = [product.title, product.shortDescription ?? '', product.description]
       .join(' ')
       .toLowerCase();
 
     return searchableText.includes(searchQuery);
   });
 
-  const hasActiveFilters = Boolean(
-    searchQuery || (selectedCategory && selectedCategory.id !== 'all') || selectedCollection,
-  );
+  const hasActiveFilters = Boolean(searchQuery || (selectedCategory && selectedCategory.id !== 'all') || selectedCollection);
   const resultsTitle = selectedCollection
     ? `Подборка «${selectedCollection.title}»`
     : selectedCategory && selectedCategory.id !== 'all'
@@ -96,7 +84,17 @@ export default async function CatalogPage({
       : 'Все товары';
 
   return (
-    <StoreScreen title="Каталог" subtitle="Ищите товары по категории, подборке или названию">
+    <StoreScreen title="Каталог" subtitle="Поиск, категории и подборки без лишнего шума">
+      <section className={styles.catalogLead}>
+        <p className={styles.catalogLeadEyebrow}>Навигация по товарам</p>
+        <h2 className={styles.catalogLeadTitle}>{resultsTitle}</h2>
+        <p className={styles.catalogLeadText}>
+          {hasActiveFilters
+            ? 'Показываем только то, что подходит под текущие фильтры.'
+            : 'Начните с поиска, категории или готовой подборки.'}
+        </p>
+      </section>
+
       <form action="/catalog" method="get" className={styles.searchRow}>
         <input
           className={styles.searchInput}
@@ -106,17 +104,11 @@ export default async function CatalogPage({
           defaultValue={searchQueryRaw}
           aria-label="Поиск товаров"
         />
-        {selectedCategory && selectedCategory.id !== 'all' && (
+        {selectedCategory && selectedCategory.id !== 'all' ? (
           <input type="hidden" name="category" value={selectedCategory.slug} />
-        )}
-        {selectedCollection && (
-          <input type="hidden" name="collection" value={selectedCollection.slug} />
-        )}
-        <button
-          type="submit"
-          className={styles.filterButton}
-          aria-label="Применить поиск по каталогу"
-        >
+        ) : null}
+        {selectedCollection ? <input type="hidden" name="collection" value={selectedCollection.slug} /> : null}
+        <button type="submit" className={styles.filterButton} aria-label="Применить поиск по каталогу">
           Найти
         </button>
       </form>
@@ -132,9 +124,7 @@ export default async function CatalogPage({
             })}
             className={classNames(
               styles.chip,
-              (selectedCategory?.id
-                ? selectedCategory.id === category.id
-                : index === 0) && styles.chipActive,
+              (selectedCategory?.id ? selectedCategory.id === category.id : index === 0) && styles.chipActive,
             )}
             aria-label={`Фильтр по категории ${category.title}`}
           >
@@ -143,7 +133,7 @@ export default async function CatalogPage({
         ))}
       </div>
 
-      {catalogData.collections.length > 0 && (
+      {catalogData.collections.length > 0 ? (
         <StoreSection title="Подборки">
           <div className={styles.collectionRail}>
             {catalogData.collections.slice(0, 6).map((collection) => (
@@ -152,11 +142,8 @@ export default async function CatalogPage({
                 href={buildCatalogHref({
                   query: searchQueryRaw || undefined,
                   category:
-                    selectedCategory && selectedCategory.id !== 'all'
-                      ? selectedCategory.slug
-                      : undefined,
-                  collection:
-                    selectedCollection?.slug === collection.slug ? undefined : collection.slug,
+                    selectedCategory && selectedCategory.id !== 'all' ? selectedCategory.slug : undefined,
+                  collection: selectedCollection?.slug === collection.slug ? undefined : collection.slug,
                 })}
                 className={classNames(
                   styles.collectionCard,
@@ -165,9 +152,7 @@ export default async function CatalogPage({
                 aria-label={`Открыть подборку ${collection.title}`}
               >
                 <p className={styles.collectionTitle}>{collection.title}</p>
-                <p className={styles.collectionDescription}>
-                  {collection.description || 'Подборка товаров'}
-                </p>
+                <p className={styles.collectionDescription}>{collection.description || 'Подборка товаров'}</p>
                 <div className={styles.collectionItems}>
                   {collection.products.slice(0, 2).map((product) => (
                     <span key={product.id} className={styles.collectionItemPill}>
@@ -179,9 +164,9 @@ export default async function CatalogPage({
             ))}
           </div>
         </StoreSection>
-      )}
+      ) : null}
 
-      {catalogData.message && (
+      {catalogData.message ? (
         <section
           className={classNames(
             styles.dataNotice,
@@ -190,41 +175,36 @@ export default async function CatalogPage({
         >
           <p className={styles.dataNoticeTitle}>Обновление каталога</p>
           <p className={styles.dataNoticeText}>{catalogData.message}</p>
-          {(catalogData.status === 'fallback_error' ||
-            catalogData.status === 'fallback_env') && (
+          {(catalogData.status === 'fallback_error' || catalogData.status === 'fallback_env') && (
             <div className={styles.dataNoticeActions}>
-              <Link
-                href="/catalog"
-                className={styles.dataNoticeRetry}
-                aria-label="Повторить загрузку каталога"
-              >
+              <Link href="/catalog" className={styles.dataNoticeRetry} aria-label="Повторить загрузку каталога">
                 Повторить
               </Link>
             </div>
           )}
         </section>
-      )}
+      ) : null}
 
-      {hasActiveFilters && (
+      {hasActiveFilters ? (
         <Link href="/catalog" className={styles.secondaryInlineLink} aria-label="Сбросить все фильтры">
           Сбросить фильтры
         </Link>
-      )}
+      ) : null}
 
-      {catalogData.promoBanners[0] && (
-        <section className={styles.marketingCard}>
-          <p className={styles.marketingEyebrow}>{catalogData.promoBanners[0].eyebrow}</p>
-          <h2 className={styles.marketingTitle}>{catalogData.promoBanners[0].title}</h2>
-          <p className={styles.marketingText}>{catalogData.promoBanners[0].description}</p>
+      {catalogData.promoBanners[0] ? (
+        <section className={styles.bannerCard}>
+          <p className={styles.bannerEyebrow}>{catalogData.promoBanners[0].eyebrow}</p>
+          <h2 className={styles.bannerTitle}>{catalogData.promoBanners[0].title}</h2>
+          <p className={styles.bannerText}>{catalogData.promoBanners[0].description}</p>
           <Link
             href={catalogData.promoBanners[0].ctaHref}
-            className={styles.marketingAction}
+            className={styles.bannerAction}
             aria-label={catalogData.promoBanners[0].ctaLabel}
           >
             {catalogData.promoBanners[0].ctaLabel}
           </Link>
         </section>
-      )}
+      ) : null}
 
       <StoreSection title={resultsTitle}>
         {catalogData.status === 'empty' ? (
@@ -235,18 +215,14 @@ export default async function CatalogPage({
         ) : filteredProducts.length === 0 ? (
           <StoreEmptyState
             title="Ничего не найдено"
-            description="Попробуйте другую категорию или сбросьте фильтры."
+            description="Попробуйте другую категорию, подборку или сбросьте фильтры."
             actionLabel="Сбросить фильтры"
             actionHref="/catalog"
           />
         ) : (
           <div className={styles.catalogGrid}>
             {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                href={`/products/${product.slug}`}
-              />
+              <ProductCard key={product.id} product={product} href={`/products/${product.slug}`} />
             ))}
           </div>
         )}

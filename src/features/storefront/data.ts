@@ -10,6 +10,8 @@ import { resolvePricingForProducts } from '@/features/pricing';
 
 import {
   buildStorefrontPromoBanners,
+  buildStorefrontMiniShelves,
+  type StorefrontMiniShelf,
   type StorefrontPromoBanner,
 } from './marketing';
 
@@ -473,6 +475,7 @@ export interface HomeStorefrontDataResult {
   categories: StorefrontCategory[];
   collections: StorefrontCollection[];
   promoBanners: StorefrontPromoBanner[];
+  miniShelves: StorefrontMiniShelf[];
   message?: string;
 }
 
@@ -515,6 +518,13 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       categories,
       collections,
       promoBanners: buildStorefrontPromoBanners(fallbackProducts, categories),
+      miniShelves: buildStorefrontMiniShelves({
+        featuredProducts: fallbackProducts.slice(0, 4),
+        latestProducts: fallbackProducts.slice(4, 8),
+        popularProducts: fallbackProducts.slice(1, 5),
+        discountProducts: fallbackProducts.filter((product) => Boolean(product.appliedDiscount)),
+        collections,
+      }),
       message:
         'Источник данных магазина пока не настроен. Показываем безопасный локальный превью-режим витрины.',
     };
@@ -532,6 +542,13 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       categories,
       collections,
       promoBanners: buildStorefrontPromoBanners(fallbackProducts, categories),
+      miniShelves: buildStorefrontMiniShelves({
+        featuredProducts: fallbackProducts.slice(0, 4),
+        latestProducts: fallbackProducts.slice(4, 8),
+        popularProducts: fallbackProducts.slice(1, 5),
+        discountProducts: fallbackProducts.filter((product) => Boolean(product.appliedDiscount)),
+        collections,
+      }),
       message: withDevDetails(
         'Данные магазина временно недоступны. Показываем безопасный локальный превью-режим витрины.',
         activeProductsResult.message,
@@ -551,6 +568,7 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       categories,
       collections: [],
       promoBanners,
+      miniShelves: [],
       message: 'Пока нет активных товаров. Опубликуйте товары в админке, чтобы заполнить витрину.',
     };
   }
@@ -571,18 +589,28 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
   const popularProducts = products
     .filter((product) => !featuredIds.has(product.id) && !latestIds.has(product.id))
     .slice(0, 4);
+  const popularResolved =
+    popularProducts.length > 0
+      ? popularProducts
+      : products.filter((product) => !featuredIds.has(product.id)).slice(0, 4);
+  const discountProducts = products.filter((product) => Boolean(product.appliedDiscount));
+  const miniShelves = buildStorefrontMiniShelves({
+    featuredProducts,
+    latestProducts: latestResolved,
+    popularProducts: popularResolved,
+    discountProducts,
+    collections,
+  });
 
   return {
     status: 'live',
     featuredProducts,
     latestProducts: latestResolved,
-    popularProducts:
-      popularProducts.length > 0
-        ? popularProducts
-        : products.filter((product) => !featuredIds.has(product.id)).slice(0, 4),
+    popularProducts: popularResolved,
     categories,
     collections,
     promoBanners,
+    miniShelves,
   };
 }
 

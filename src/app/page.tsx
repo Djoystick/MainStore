@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { ProductCard } from '@/components/store/ProductCard';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
+import { StoreMiniShelfSection } from '@/components/store/StoreMiniShelfSection';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
 import { classNames } from '@/css/classnames';
@@ -10,43 +11,54 @@ import styles from '@/components/store/store.module.css';
 
 export default async function HomePage() {
   const homeData = await getHomeStorefrontData();
-  const categoryShortcuts = homeData.categories
-    .filter((category) => category.id !== 'all')
-    .slice(0, 4);
+  const categoryShortcuts = homeData.categories.filter((category) => category.id !== 'all').slice(0, 4);
+  const quickLinks = [
+    { id: 'catalog', title: 'Каталог', subtitle: 'Все товары', href: '/catalog' },
+    ...categoryShortcuts.map((category) => ({
+      id: category.id,
+      title: category.title,
+      subtitle: category.description || 'Смотреть раздел',
+      href: `/catalog?category=${category.slug}`,
+    })),
+  ].slice(0, 4);
+  const collectionCards = homeData.collections.slice(0, 3);
+  const popularProducts = homeData.popularProducts.length > 0 ? homeData.popularProducts : homeData.featuredProducts;
   const uniqueShownProducts = new Set(
-    [...homeData.featuredProducts, ...homeData.latestProducts].map((product) => product.id),
+    [...homeData.featuredProducts, ...homeData.latestProducts, ...popularProducts].map((product) => product.id),
   ).size;
 
   return (
     <StoreScreen
       title="Главная"
-      subtitle="Подборка для быстрых покупок в Telegram"
+      subtitle="Спокойная витрина для быстрых покупок в Telegram"
       back={false}
     >
       <section className={styles.hero}>
-        <p className={styles.heroEyebrow}>Выбор MainStore</p>
-        <h2 className={styles.heroTitle}>Покупки в пару касаний</h2>
-        <p className={styles.heroText}>
-          Собрали заметные товары, новинки и готовые подборки для короткого и понятного сценария внутри Mini App.
-        </p>
+        <div className={styles.heroContent}>
+          <p className={styles.heroEyebrow}>MainStore</p>
+          <h2 className={styles.heroTitle}>Покупки без лишнего шума</h2>
+          <p className={styles.heroText}>
+            Сначала главное: понятные категории, аккуратные подборки и короткий путь к нужному товару.
+          </p>
+        </div>
+
         <div className={styles.heroMeta}>
           <span className={styles.heroMetaItem}>{uniqueShownProducts} товаров на витрине</span>
-          <span className={styles.heroMetaItem}>
-            {homeData.collections.length} готовых подборок
-          </span>
+          <span className={styles.heroMetaItem}>{homeData.collections.length} готовых подборок</span>
         </div>
+
         <div className={styles.heroActions}>
           <Link
             href="/catalog"
             className={styles.heroButton}
             aria-label="Открыть каталог с главного экрана"
           >
-            Открыть каталог
+            Смотреть каталог
           </Link>
         </div>
       </section>
 
-      {homeData.message && (
+      {homeData.message ? (
         <section
           className={classNames(
             styles.dataNotice,
@@ -63,86 +75,72 @@ export default async function HomePage() {
             </div>
           )}
         </section>
-      )}
+      ) : null}
 
-      {homeData.promoBanners.length > 0 && (
-        <section className={styles.marketingGrid} aria-label="Промо-блоки магазина">
+      {quickLinks.length > 0 ? (
+        <section className={styles.quickLinkRow} aria-label="Быстрые переходы по витрине">
+          {quickLinks.map((link) => (
+            <Link
+              key={link.id}
+              href={link.href}
+              className={styles.quickLinkCard}
+              aria-label={`Открыть раздел ${link.title}`}
+            >
+              <p className={styles.quickLinkTitle}>{link.title}</p>
+              <p className={styles.quickLinkSubtitle}>{link.subtitle}</p>
+            </Link>
+          ))}
+        </section>
+      ) : null}
+
+      {homeData.promoBanners.length > 0 ? (
+        <section className={styles.bannerRail} aria-label="Подсказки и акценты витрины">
           {homeData.promoBanners.map((banner) => (
-            <article key={banner.id} className={styles.marketingCard}>
-              <p className={styles.marketingEyebrow}>{banner.eyebrow}</p>
-              <h2 className={styles.marketingTitle}>{banner.title}</h2>
-              <p className={styles.marketingText}>{banner.description}</p>
-              <Link
-                href={banner.ctaHref}
-                className={styles.marketingAction}
-                aria-label={banner.ctaLabel}
-              >
+            <article key={banner.id} className={styles.bannerCard}>
+              <p className={styles.bannerEyebrow}>{banner.eyebrow}</p>
+              <h2 className={styles.bannerTitle}>{banner.title}</h2>
+              <p className={styles.bannerText}>{banner.description}</p>
+              <Link href={banner.ctaHref} className={styles.bannerAction} aria-label={banner.ctaLabel}>
                 {banner.ctaLabel}
               </Link>
             </article>
           ))}
         </section>
-      )}
-
-      {categoryShortcuts.length > 0 && (
-        <StoreSection title="Покупки по категориям" actionLabel="Все категории" actionHref="/catalog">
-          <div className={styles.categoryShortcutGrid}>
-            {categoryShortcuts.map((category) => (
-              <Link
-                key={category.id}
-                href={`/catalog?category=${category.slug}`}
-                className={styles.categoryShortcut}
-                aria-label={`Открыть категорию ${category.title}`}
-              >
-                <p className={styles.categoryShortcutTitle}>{category.title}</p>
-                <p className={styles.categoryShortcutSub}>
-                  {category.description || 'Посмотреть товары'}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </StoreSection>
-      )}
+      ) : null}
 
       {homeData.status === 'empty' ? (
-          <StoreEmptyState
-            title="Товаров пока нет"
-            description="На витрине еще нет активных товаров. Опубликуйте их в админке."
-            actionLabel="Открыть каталог"
-            actionHref="/catalog"
-          />
-        ) : (
+        <StoreEmptyState
+          title="Товаров пока нет"
+          description="На витрине ещё нет активных товаров. Опубликуйте их в админке, чтобы заполнить магазин."
+          actionLabel="Открыть каталог"
+          actionHref="/catalog"
+        />
+      ) : (
         <>
-          <StoreSection title="Рекомендуем сейчас" actionLabel="Смотреть все" actionHref="/catalog">
+          {homeData.miniShelves.map((shelf) => (
+            <StoreMiniShelfSection key={shelf.id} shelf={shelf} />
+          ))}
+
+          <StoreSection title="Популярное сейчас" actionLabel="В каталог" actionHref="/catalog">
             <div className={styles.scrollRow}>
-              {homeData.featuredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  href={`/products/${product.slug}`}
-                  compact
-                />
+              {popularProducts.map((product) => (
+                <ProductCard key={product.id} product={product} href={`/products/${product.slug}`} compact />
               ))}
             </div>
           </StoreSection>
 
-          <StoreSection title="Новинки" actionLabel="Каталог" actionHref="/catalog">
+          <StoreSection title="Новые поступления" actionLabel="Все товары" actionHref="/catalog">
             <div className={styles.scrollRow}>
               {homeData.latestProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  href={`/products/${product.slug}`}
-                  compact
-                />
+                <ProductCard key={product.id} product={product} href={`/products/${product.slug}`} compact />
               ))}
             </div>
           </StoreSection>
 
-          {homeData.collections.length > 0 && (
-            <StoreSection title="Подборки" actionLabel="Открыть каталог" actionHref="/catalog">
+          {collectionCards.length > 0 ? (
+            <StoreSection title="Подборки для быстрого старта" actionLabel="Каталог" actionHref="/catalog">
               <div className={styles.collectionRail}>
-                {homeData.collections.slice(0, 4).map((collection) => (
+                {collectionCards.map((collection) => (
                   <Link
                     key={collection.id}
                     href={`/catalog?collection=${collection.slug}`}
@@ -151,10 +149,10 @@ export default async function HomePage() {
                   >
                     <p className={styles.collectionTitle}>{collection.title}</p>
                     <p className={styles.collectionDescription}>
-                      {collection.description || 'Товары, собранные для этой подборки.'}
+                      {collection.description || 'Товары, которые удобно просмотреть за пару минут.'}
                     </p>
                     <div className={styles.collectionItems}>
-                      {collection.products.slice(0, 3).map((product) => (
+                      {collection.products.slice(0, 2).map((product) => (
                         <span key={product.id} className={styles.collectionItemPill}>
                           {product.title}
                         </span>
@@ -164,8 +162,7 @@ export default async function HomePage() {
                 ))}
               </div>
             </StoreSection>
-          )}
-
+          ) : null}
         </>
       )}
     </StoreScreen>

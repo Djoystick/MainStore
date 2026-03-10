@@ -65,9 +65,7 @@ export default async function ProductPage({
   ]);
   const product = productData.product;
 
-  const favoriteIds = product
-    ? await getFavoriteProductIdsForProfile(userContext.profile?.id ?? null)
-    : [];
+  const favoriteIds = product ? await getFavoriteProductIdsForProfile(userContext.profile?.id ?? null) : [];
   const favoriteIdSet = new Set(favoriteIds);
   const isFavorited = product ? favoriteIdSet.has(product.id) : false;
 
@@ -79,14 +77,12 @@ export default async function ProductPage({
 
   const detailImageStyle = product?.imageUrl
     ? {
-        backgroundImage: `linear-gradient(rgba(12, 18, 31, 0.18), rgba(12, 18, 31, 0.18)), url(${product.imageUrl})`,
+        backgroundImage: `linear-gradient(rgba(12, 18, 31, 0.16), rgba(12, 18, 31, 0.16)), url(${product.imageUrl})`,
         backgroundPosition: 'center',
         backgroundSize: 'cover',
       }
     : {
-        background:
-          product?.imageGradient ||
-          'linear-gradient(135deg, #9fb8ff 0%, #5f7de8 100%)',
+        background: product?.imageGradient || 'linear-gradient(135deg, #9fb8ff 0%, #5f7de8 100%)',
       };
 
   return (
@@ -96,13 +92,11 @@ export default async function ProductPage({
       back={true}
       showBottomNav={false}
     >
-      {productData.message && (
+      {productData.message ? (
         <section
           className={classNames(
             styles.dataNotice,
-            (productData.status === 'error' ||
-              productData.status === 'fallback_error') &&
-              styles.dataNoticeError,
+            (productData.status === 'error' || productData.status === 'fallback_error') && styles.dataNoticeError,
           )}
         >
           <p className={styles.dataNoticeTitle}>Обновление товара</p>
@@ -121,7 +115,7 @@ export default async function ProductPage({
             </div>
           )}
         </section>
-      )}
+      ) : null}
 
       {!product ? (
         <StoreEmptyState
@@ -137,36 +131,33 @@ export default async function ProductPage({
               <div className={styles.detailImage} style={detailImageStyle}>
                 <span className={styles.productImageLabel}>{product.imageLabel}</span>
               </div>
+
               <div className={styles.detailMeta}>
-                <h2 className={styles.detailTitle}>{product.title}</h2>
+                <div className={styles.detailHeading}>
+                  <h2 className={styles.detailTitle}>{product.title}</h2>
+                  {product.shortDescription ? <p className={styles.detailLead}>{product.shortDescription}</p> : null}
+                </div>
+
                 <div className={styles.detailPriceRow}>
                   <p className={styles.detailPrice}>{price}</p>
-                  {compareAtPrice && (
-                    <p className={styles.detailPriceCompare}>{compareAtPrice}</p>
-                  )}
+                  {compareAtPrice ? <p className={styles.detailPriceCompare}>{compareAtPrice}</p> : null}
                 </div>
-                {product.appliedDiscount && (
+
+                {product.appliedDiscount ? (
                   <p className={styles.detailDiscountNote}>
-                    {product.appliedDiscount.badgeText} по скидке {formatDiscountScope(product.appliedDiscount.scope)} «{product.appliedDiscount.title}».
+                    {product.appliedDiscount.badgeText} по скидке {formatDiscountScope(product.appliedDiscount.scope)} «
+                    {product.appliedDiscount.title}».
                   </p>
-                )}
+                ) : null}
+
                 <p className={styles.detailDescription}>{product.description}</p>
+
                 <div className={styles.detailActions}>
                   <div className={styles.detailActionGrid}>
-                    <FavoriteToggleButton
-                      productId={product.id}
-                      initialFavorited={isFavorited}
-                    />
-                    <ProductShareButton
-                      productSlug={product.slug}
-                      productTitle={product.title}
-                    />
+                    <FavoriteToggleButton productId={product.id} initialFavorited={isFavorited} />
+                    <ProductShareButton productSlug={product.slug} productTitle={product.title} />
                   </div>
-                  <Link
-                    href="/catalog"
-                    className={styles.secondaryInlineLink}
-                    aria-label="Вернуться в каталог"
-                  >
+                  <Link href="/catalog" className={styles.secondaryInlineLink} aria-label="Вернуться в каталог">
                     Вернуться в каталог
                   </Link>
                 </div>
@@ -174,34 +165,26 @@ export default async function ProductPage({
             </section>
 
             <section className={styles.panel}>
-              <h2 className={styles.panelTitle}>Поделиться и открыть позже</h2>
+              <h2 className={styles.panelTitle}>Ссылка на товар</h2>
               <p className={styles.panelText}>
-                Ссылка на товар работает как прямой путь и открывается и в Telegram, и в браузере.
+                Эту позицию можно открыть позже по прямой ссылке и в Telegram Mini App, и в браузере.
               </p>
             </section>
 
-            {productData.relatedProducts.length > 0 && (
-              <StoreSection title="Может пригодиться">
+            {productData.relatedProducts.length > 0 ? (
+              <StoreSection title="Ещё может подойти">
                 <div className={styles.scrollRow}>
                   {productData.relatedProducts.map((item) => (
-                    <ProductCard
-                      key={item.id}
-                      product={item}
-                      href={`/products/${item.slug}`}
-                      compact
-                    />
+                    <ProductCard key={item.id} product={item} href={`/products/${item.slug}`} compact />
                   ))}
                 </div>
               </StoreSection>
-            )}
+            ) : null}
           </div>
 
           <div className={styles.stickyBar}>
             <div className={styles.stickyBarInner}>
-              <AddToCartButton
-                productId={product.id}
-                className={styles.stickyBarButton}
-              />
+              <AddToCartButton productId={product.id} className={styles.stickyBarButton} />
             </div>
           </div>
         </>
