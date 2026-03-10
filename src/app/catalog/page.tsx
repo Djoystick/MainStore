@@ -1,12 +1,14 @@
 import { ProductCard } from '@/components/store/ProductCard';
+import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
-import { storeProducts } from '@/components/store/mock-products';
+import { classNames } from '@/css/classnames';
+import { getCatalogStorefrontData } from '@/features/storefront/data';
 import styles from '@/components/store/store.module.css';
 
-const catalogChips = ['All', 'Clothes', 'Accessories', 'Home', 'Tech'];
+export default async function CatalogPage() {
+  const catalogData = await getCatalogStorefrontData();
 
-export default function CatalogPage() {
   return (
     <StoreScreen title="Catalog" subtitle="Find products by category or keyword">
       <div className={styles.searchRow}>
@@ -27,26 +29,45 @@ export default function CatalogPage() {
       </div>
 
       <div className={styles.chipRow}>
-        {catalogChips.map((chip, index) => (
+        {catalogData.categories.map((category, index) => (
           <span
-            key={chip}
+            key={category.id}
             className={`${styles.chip} ${index === 0 ? styles.chipActive : ''}`}
           >
-            {chip}
+            {category.title}
           </span>
         ))}
       </div>
 
+      {catalogData.message && (
+        <section
+          className={classNames(
+            styles.dataNotice,
+            catalogData.status === 'fallback_error' && styles.dataNoticeError,
+          )}
+        >
+          <p className={styles.dataNoticeTitle}>Storefront data status</p>
+          <p className={styles.dataNoticeText}>{catalogData.message}</p>
+        </section>
+      )}
+
       <StoreSection title="All products">
-        <div className={styles.catalogGrid}>
-          {storeProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              href={`/products/${product.id}`}
-            />
-          ))}
-        </div>
+        {catalogData.status === 'empty' ? (
+          <StoreEmptyState
+            title="Catalog is empty"
+            description="There are no active products in Supabase yet. Add seed data or create products in the dashboard."
+          />
+        ) : (
+          <div className={styles.catalogGrid}>
+            {catalogData.products.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                href={`/products/${product.slug}`}
+              />
+            ))}
+          </div>
+        )}
       </StoreSection>
     </StoreScreen>
   );

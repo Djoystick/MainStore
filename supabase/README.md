@@ -23,8 +23,26 @@ The initial shop schema is in:
 
 - `supabase/migrations/20260309190000_store_backend_foundation.sql`
 
+## Seed Storefront Products (Dev)
+
+Seed file:
+
+- `supabase/seed.sql`
+
+Recommended (recreates local DB and applies seed automatically):
+
+```bash
+supabase db reset
+```
+
+Or apply only seed manually:
+
+```bash
+supabase db query < supabase/seed.sql
+```
+
 ## Scope of This Stage
 
 - Schema, indexes, enums, constraints, RLS, and policies are prepared.
 - Typed database scaffold exists in `src/types/db.ts`.
-- No runtime data fetch from UI pages is connected yet.
+- Storefront pages can now read real products from Supabase with controlled fallback.

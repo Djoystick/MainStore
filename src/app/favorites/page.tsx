@@ -16,7 +16,7 @@ export default function FavoritesPage() {
             <ProductCard
               key={product.id}
               product={product}
-              href={`/products/${product.id}`}
+              href={`/products/${product.slug}`}
             />
           ))}
         </div>

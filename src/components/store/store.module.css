@@ -500,6 +500,72 @@
   font-weight: 700;
 }
 
+.dataNotice {
+  border: 1px solid var(--store-border);
+  border-radius: 14px;
+  background: var(--store-surface);
+  padding: 12px 14px;
+}
+
+.dataNoticeError {
+  border-color: rgba(221, 74, 74, 0.45);
+  background: rgba(221, 74, 74, 0.09);
+}
+
+.dataNoticeTitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.dataNoticeText {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--store-hint);
+}
+
+.loadingBlock {
+  border-radius: 14px;
+  border: 1px solid var(--store-border);
+  background: var(--store-surface);
+  position: relative;
+  overflow: hidden;
+}
+
+.loadingHero {
+  min-height: 164px;
+}
+
+.loadingBar {
+  min-height: 44px;
+}
+
+.loadingSection {
+  min-height: 220px;
+}
+
+.loadingBlock::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.38) 45%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: store-shimmer 1.25s infinite;
+}
+
+@keyframes store-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 .bottomNavShell {
   position: fixed;
   left: 0;
@@ -601,5 +667,14 @@
   .bottomNavLinkActive {
     border-color: rgba(76, 126, 255, 0.45);
     background: rgba(76, 126, 255, 0.2);
+  }
+
+  .loadingBlock::after {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.14) 45%,
+      rgba(255, 255, 255, 0) 100%
+    );
   }
 }
