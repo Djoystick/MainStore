@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getAdminRequestAccess, updateAdminOrderStatus, type OrderStatus } from '@/features/admin';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 interface StatusPayload {
   status?: OrderStatus;
@@ -60,9 +61,11 @@ export async function PATCH(
 
   const result = await updateAdminOrderStatus(orderId, payload.status);
   if (!result.ok) {
+    const status = result.error === 'not_configured' ? 503 : 400;
+    const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error: result.error },
-      { status: result.error === 'not_configured' ? 503 : 400 },
+      { ok: false, error: result.error, details },
+      { status },
     );
   }
 

@@ -5,6 +5,7 @@ import {
   removeCartItemForProfile,
   updateCartItemQuantityForProfile,
 } from '@/features/user-store/data';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 interface UpdateCartItemBody {
   quantity?: number;
@@ -61,8 +62,9 @@ export async function PATCH(
   const result = await updateCartItemQuantityForProfile(profile.id, itemId, quantity);
   if (!result.ok || !result.data) {
     const error = result.error ?? 'cart_item_update_failed';
+    const details = error === 'not_configured' ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error },
+      { ok: false, error, details },
       { status: getStatusByError(error) },
     );
   }
@@ -96,8 +98,9 @@ export async function DELETE(
   const result = await removeCartItemForProfile(profile.id, itemId);
   if (!result.ok) {
     const error = result.error ?? 'cart_item_remove_failed';
+    const details = error === 'not_configured' ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error },
+      { ok: false, error, details },
       { status: getStatusByError(error) },
     );
   }

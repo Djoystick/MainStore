@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getAdminRequestAccess, updateAdminCategory } from '@/features/admin';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 interface CategoryPayload {
   title?: string;
@@ -57,9 +58,11 @@ export async function PATCH(
   );
 
   if (!result.ok) {
+    const status = result.error === 'not_configured' ? 503 : 400;
+    const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error: result.error },
-      { status: result.error === 'not_configured' ? 503 : 400 },
+      { ok: false, error: result.error, details },
+      { status },
     );
   }
 

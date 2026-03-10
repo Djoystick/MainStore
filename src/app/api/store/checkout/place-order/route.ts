@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { getRequestUserContext } from '@/features/auth';
 import { placeOrderFromCartForProfile, type CheckoutPayload } from '@/features/orders/data';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 function getStatusCode(status: string): number {
   if (status === 'unauthorized') {
@@ -41,8 +42,13 @@ export async function POST(request: NextRequest) {
   const result = await placeOrderFromCartForProfile(profile.id, payload);
 
   if (result.status !== 'ok') {
+    const details =
+      result.status === 'not_configured'
+        ? [getSupabaseAdminMissingEnvMessage()]
+        : undefined;
+
     return NextResponse.json(
-      { ok: false, error: result.status, message: result.message },
+      { ok: false, error: result.status, message: result.message, details },
       { status: getStatusCode(result.status) },
     );
   }

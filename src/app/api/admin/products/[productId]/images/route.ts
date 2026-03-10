@@ -5,6 +5,7 @@ import {
   getAdminRequestAccess,
   type ProductImageUpsertInput,
 } from '@/features/admin';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 function getAccessStatusCode(reason: string): number {
   return reason === 'no_session' ? 401 : 403;
@@ -62,9 +63,11 @@ export async function POST(
 
   const result = await createAdminProductImage(productId, payload);
   if (!result.ok || !result.data) {
+    const status = result.error === 'not_configured' ? 503 : 400;
+    const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error: result.error },
-      { status: result.error === 'not_configured' ? 503 : 400 },
+      { ok: false, error: result.error, details },
+      { status },
     );
   }
 

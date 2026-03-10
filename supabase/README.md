@@ -1,48 +1,58 @@
-# Supabase Backend Foundation
+# MainStore Supabase Setup
 
-This folder stores database migrations for MainStore.
+This folder contains database migrations and seed data for MainStore.
 
-## Environment
+## Required Env Context
 
-Copy `.env.example` to `.env.local` and fill:
+The app expects:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+- `TELEGRAM_BOT_TOKEN` (server-only)
+- `APP_SESSION_SECRET` (server-only)
 
-Do not commit real keys.
+See root `.env.example` for details.
 
-## Apply Migrations
+## Migrations
 
-With Supabase CLI configured for your project:
+Migration files:
 
-```bash
-supabase db push
-```
+1. `migrations/20260309190000_store_backend_foundation.sql`
+2. `migrations/20260310123000_checkout_order_flow.sql`
 
-The initial shop schema is in:
+## Local DB
 
-- `supabase/migrations/20260309190000_store_backend_foundation.sql`
-
-## Seed Storefront Products (Dev)
-
-Seed file:
-
-- `supabase/seed.sql`
-
-Recommended (recreates local DB and applies seed automatically):
+Apply migrations + seed in one step:
 
 ```bash
 supabase db reset
 ```
 
-Or apply only seed manually:
+## Remote DB
+
+1. Link project:
 
 ```bash
-supabase db query < supabase/seed.sql
+supabase link --project-ref <your-project-ref>
 ```
 
-## Scope of This Stage
+2. Push migrations:
 
-- Schema, indexes, enums, constraints, RLS, and policies are prepared.
-- Typed database scaffold exists in `src/types/db.ts`.
-- Storefront pages can now read real products from Supabase with controlled fallback.
+```bash
+supabase db push
+```
+
+3. If test catalog data is needed, run `seed.sql` manually in Supabase SQL Editor.
+
+## Seed Data
+
+`seed.sql` inserts:
+
+- categories
+- products
+- product_images
+- collections
+- collection_items
+
+Use seed only for development/testing data bootstrap.

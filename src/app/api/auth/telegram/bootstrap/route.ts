@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 
 import {
+  getSessionFeatureMissingEnvMessage,
+  getTelegramVerificationMissingEnvMessage,
   isSessionFeatureConfigured,
   isTelegramVerificationConfigured,
   setSessionCookie,
   upsertProfileFromTelegramIdentity,
   verifyTelegramInitData,
 } from '@/features/auth';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 interface BootstrapBody {
   initDataRaw?: string;
@@ -17,8 +20,11 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error:
-          'Server session bootstrap is not configured. Missing TELEGRAM_BOT_TOKEN or APP_SESSION_SECRET.',
+        error: 'Server session bootstrap is not configured.',
+        details: [
+          getTelegramVerificationMissingEnvMessage(),
+          getSessionFeatureMissingEnvMessage(),
+        ],
       },
       { status: 503 },
     );
@@ -54,9 +60,13 @@ export async function POST(request: Request) {
   if (!upsertResult.ok) {
     const statusCode =
       upsertResult.reason === 'supabase_service_role_missing' ? 503 : 500;
+    const details =
+      upsertResult.reason === 'supabase_service_role_missing'
+        ? [getSupabaseAdminMissingEnvMessage()]
+        : undefined;
 
     return NextResponse.json(
-      { ok: false, error: `Profile upsert failed: ${upsertResult.reason}` },
+      { ok: false, error: `Profile upsert failed: ${upsertResult.reason}`, details },
       { status: statusCode },
     );
   }

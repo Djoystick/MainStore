@@ -1,6 +1,14 @@
 export { getSupabaseBrowserClient } from './browser';
 export {
+  getSupabasePublicMissingEnvKeys,
+  getSupabasePublicMissingEnvMessage,
+} from './env';
+export {
   createSupabaseServerClient,
   createSupabaseServerClientOptional,
 } from './server';
-export { createSupabaseAdminClientOptional } from './admin';
+export {
+  createSupabaseAdminClientOptional,
+  getSupabaseAdminMissingEnvKeys,
+  getSupabaseAdminMissingEnvMessage,
+} from './admin';

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { getRequestUserContext } from '@/features/auth';
 import { toggleFavoriteForProfile } from '@/features/user-store/data';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 interface ToggleFavoriteBody {
   productId?: string;
@@ -48,8 +49,9 @@ export async function POST(request: NextRequest) {
   const result = await toggleFavoriteForProfile(profile.id, productId);
   if (!result.ok || !result.data) {
     const error = result.error ?? 'favorite_toggle_failed';
+    const details = error === 'not_configured' ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error },
+      { ok: false, error, details },
       { status: getStatusByError(error) },
     );
   }

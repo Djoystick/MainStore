@@ -1,6 +1,9 @@
 import 'server-only';
 
-import { createSupabaseAdminClientOptional } from '@/lib/supabase';
+import {
+  createSupabaseAdminClientOptional,
+  getSupabaseAdminMissingEnvMessage,
+} from '@/lib/supabase';
 import type { Database, Json } from '@/types/db';
 
 import type {
@@ -167,7 +170,7 @@ export async function getAdminCategories(): Promise<AdminCategoriesResult> {
     return {
       status: 'not_configured',
       categories: [],
-      message: 'Supabase admin backend is not configured.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -196,7 +199,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
     return {
       status: 'not_configured',
       dashboard: null,
-      message: 'Supabase admin backend is not configured.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -245,7 +248,7 @@ export async function getAdminProducts(): Promise<AdminProductsResult> {
     return {
       status: 'not_configured',
       products: [],
-      message: 'Supabase admin backend is not configured.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -310,7 +313,7 @@ export async function getAdminProductDetail(
       status: 'not_configured',
       product: null,
       categories: [],
-      message: 'Supabase admin backend is not configured.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -399,7 +402,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
     return {
       status: 'not_configured',
       orders: [],
-      message: 'Supabase admin backend is not configured.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -498,7 +501,7 @@ export async function getAdminOrderDetail(
     return {
       status: 'not_configured',
       order: null,
-      message: 'Supabase admin backend is not configured.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 

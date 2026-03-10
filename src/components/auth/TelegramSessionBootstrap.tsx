@@ -28,14 +28,29 @@ export function TelegramSessionBootstrap() {
 
     attemptedInitData.current = rawInitData;
 
-    void fetch('/api/auth/telegram/bootstrap', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ initDataRaw: rawInitData }),
-    }).catch(() => {
-      // Session bootstrap failure is non-fatal for read-only storefront mode.
-    });
+    void (async () => {
+      try {
+        const response = await fetch('/api/auth/telegram/bootstrap', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ initDataRaw: rawInitData }),
+        });
+
+        if (!response.ok && process.env.NODE_ENV === 'development') {
+          const payload = (await response.json().catch(() => null)) as
+            | { error?: string; details?: string[] }
+            | null;
+          console.warn(
+            '[MainStore] Telegram session bootstrap failed',
+            payload?.error ?? `HTTP ${response.status}`,
+            payload?.details ?? [],
+          );
+        }
+      } catch {
+        // Session bootstrap failure is non-fatal for read-only storefront mode.
+      }
+    })();
   }, [rawInitData]);
 
   return null;

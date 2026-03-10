@@ -6,6 +6,7 @@ import {
   updateAdminProductImage,
   type ProductImageUpsertInput,
 } from '@/features/admin';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 function getAccessStatusCode(reason: string): number {
   return reason === 'no_session' ? 401 : 403;
@@ -63,9 +64,11 @@ export async function PATCH(
 
   const result = await updateAdminProductImage(imageId, payload);
   if (!result.ok) {
+    const status = result.error === 'not_configured' ? 503 : 400;
+    const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error: result.error },
-      { status: result.error === 'not_configured' ? 503 : 400 },
+      { ok: false, error: result.error, details },
+      { status },
     );
   }
 
@@ -94,9 +97,11 @@ export async function DELETE(
 
   const result = await deleteAdminProductImage(imageId);
   if (!result.ok) {
+    const status = result.error === 'not_configured' ? 503 : 400;
+    const details = status === 503 ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error: result.error },
-      { status: result.error === 'not_configured' ? 503 : 400 },
+      { ok: false, error: result.error, details },
+      { status },
     );
   }
 

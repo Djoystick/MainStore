@@ -3,12 +3,17 @@ import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/db';
+import { ENV_KEYS, formatMissingEnvMessage, getMissingEnvKeys, readEnvOptional } from '@/lib/env/model';
 
 import { getSupabaseConfigOptional } from './env';
 
+const adminRequiredEnv = [
+  ...ENV_KEYS.PUBLIC,
+  'SUPABASE_SERVICE_ROLE_KEY',
+] as const;
+
 function getServiceRoleKeyOptional(): string | null {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return serviceRoleKey ? serviceRoleKey : null;
+  return readEnvOptional('SUPABASE_SERVICE_ROLE_KEY');
 }
 
 export function createSupabaseAdminClientOptional():
@@ -28,4 +33,15 @@ export function createSupabaseAdminClientOptional():
       detectSessionInUrl: false,
     },
   });
+}
+
+export function getSupabaseAdminMissingEnvKeys() {
+  return getMissingEnvKeys(adminRequiredEnv);
+}
+
+export function getSupabaseAdminMissingEnvMessage() {
+  return formatMissingEnvMessage(
+    'Supabase admin server client configuration',
+    adminRequiredEnv,
+  );
 }

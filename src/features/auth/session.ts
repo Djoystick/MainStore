@@ -4,6 +4,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
 import type { NextRequest, NextResponse } from 'next/server';
 
+import { formatMissingEnvMessage, readEnvOptional } from '@/lib/env/model';
+
 import type { AppSession } from './types';
 
 const SESSION_COOKIE_NAME = 'ms_session';
@@ -21,8 +23,7 @@ type SessionPayload = {
 };
 
 function getSessionSecretOptional(): string | null {
-  const secret = process.env.APP_SESSION_SECRET;
-  return secret ? secret : null;
+  return readEnvOptional('APP_SESSION_SECRET');
 }
 
 function encodePayload(payload: SessionPayload): string {
@@ -189,4 +190,8 @@ export function clearSessionCookie(response: NextResponse) {
 
 export function isSessionFeatureConfigured(): boolean {
   return Boolean(getSessionSecretOptional());
+}
+
+export function getSessionFeatureMissingEnvMessage(): string {
+  return formatMissingEnvMessage('Signed app session configuration', ['APP_SESSION_SECRET']);
 }

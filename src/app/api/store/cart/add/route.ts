@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { getRequestUserContext } from '@/features/auth';
 import { addProductToCartForProfile } from '@/features/user-store/data';
+import { getSupabaseAdminMissingEnvMessage } from '@/lib/supabase';
 
 interface AddToCartBody {
   productId?: string;
@@ -57,8 +58,9 @@ export async function POST(request: NextRequest) {
   const result = await addProductToCartForProfile(profile.id, productId, quantity);
   if (!result.ok || !result.data) {
     const error = result.error ?? 'cart_add_failed';
+    const details = error === 'not_configured' ? [getSupabaseAdminMissingEnvMessage()] : undefined;
     return NextResponse.json(
-      { ok: false, error },
+      { ok: false, error, details },
       { status: getStatusByError(error) },
     );
   }

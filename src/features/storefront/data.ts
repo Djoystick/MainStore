@@ -1,4 +1,7 @@
-import { createSupabaseServerClientOptional } from '@/lib/supabase';
+import {
+  createSupabaseServerClientOptional,
+  getSupabasePublicMissingEnvMessage,
+} from '@/lib/supabase';
 import { findStoreProduct, storeProducts } from '@/components/store/mock-products';
 import type { StoreProduct } from '@/components/store/types';
 import type { Database } from '@/types/db';
@@ -245,8 +248,7 @@ export async function getHomeStorefrontData(): Promise<HomeStorefrontDataResult>
       status: 'fallback_env',
       featuredProducts: storeProducts.slice(0, 4),
       latestProducts: storeProducts.slice(4, 8),
-      message:
-        'Supabase is not configured. Showing fallback products from local seed.',
+      message: `${getSupabasePublicMissingEnvMessage()} Showing fallback products from local seed.`,
     };
   }
 
@@ -298,8 +300,7 @@ export async function getCatalogStorefrontData(): Promise<CatalogStorefrontDataR
       status: 'fallback_env',
       products: storeProducts,
       categories,
-      message:
-        'Supabase is not configured. Showing fallback products from local seed.',
+      message: `${getSupabasePublicMissingEnvMessage()} Showing fallback products from local seed.`,
     };
   }
 
@@ -356,8 +357,7 @@ export async function getProductStorefrontData(
       relatedProducts: storeProducts
         .filter((item) => item.id !== fallbackProduct.id)
         .slice(0, 3),
-      message:
-        'Supabase is not configured. Showing fallback product from local seed.',
+      message: `${getSupabasePublicMissingEnvMessage()} Showing fallback product from local seed.`,
     };
   }
 

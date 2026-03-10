@@ -1,27 +1,14 @@
-type SupabaseEnvName =
-  | 'NEXT_PUBLIC_SUPABASE_URL'
-  | 'NEXT_PUBLIC_SUPABASE_ANON_KEY';
-
-function readEnv(name: SupabaseEnvName): string {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(
-      `Missing environment variable: ${name}. Add it to your local .env file.`,
-    );
-  }
-
-  return value;
-}
-
-function readEnvOptional(name: SupabaseEnvName): string | null {
-  const value = process.env[name];
-  return value ? value : null;
-}
+import {
+  ENV_KEYS,
+  formatMissingEnvMessage,
+  getMissingEnvKeys,
+  readEnvOptional as readEnvGlobalOptional,
+  readEnvRequired,
+} from '@/lib/env/model';
 
 export function getSupabaseConfigOptional() {
-  const url = readEnvOptional('NEXT_PUBLIC_SUPABASE_URL');
-  const anonKey = readEnvOptional('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  const url = readEnvGlobalOptional('NEXT_PUBLIC_SUPABASE_URL');
+  const anonKey = readEnvGlobalOptional('NEXT_PUBLIC_SUPABASE_ANON_KEY');
 
   if (!url || !anonKey) {
     return null;
@@ -32,7 +19,15 @@ export function getSupabaseConfigOptional() {
 
 export function getSupabaseConfig() {
   return {
-    url: readEnv('NEXT_PUBLIC_SUPABASE_URL'),
-    anonKey: readEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
+    url: readEnvRequired('NEXT_PUBLIC_SUPABASE_URL'),
+    anonKey: readEnvRequired('NEXT_PUBLIC_SUPABASE_ANON_KEY'),
   };
+}
+
+export function getSupabasePublicMissingEnvKeys() {
+  return getMissingEnvKeys(ENV_KEYS.PUBLIC);
+}
+
+export function getSupabasePublicMissingEnvMessage() {
+  return formatMissingEnvMessage('Supabase public client configuration', ENV_KEYS.PUBLIC);
 }

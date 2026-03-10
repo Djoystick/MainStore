@@ -2,13 +2,14 @@ import 'server-only';
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
+import { formatMissingEnvMessage, readEnvOptional } from '@/lib/env/model';
+
 import type { TelegramIdentity } from './types';
 
 const MAX_INIT_DATA_AGE_SECONDS = 60 * 60 * 24;
 
 function getTelegramBotTokenOptional(): string | null {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  return token ? token : null;
+  return readEnvOptional('TELEGRAM_BOT_TOKEN');
 }
 
 function hashTelegramData(dataCheckString: string, botToken: string): string {
@@ -125,4 +126,8 @@ export function verifyTelegramInitData(
 
 export function isTelegramVerificationConfigured(): boolean {
   return Boolean(getTelegramBotTokenOptional());
+}
+
+export function getTelegramVerificationMissingEnvMessage(): string {
+  return formatMissingEnvMessage('Telegram init data verification', ['TELEGRAM_BOT_TOKEN']);
 }

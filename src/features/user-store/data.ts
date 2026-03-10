@@ -1,6 +1,9 @@
 import 'server-only';
 
-import { createSupabaseAdminClientOptional } from '@/lib/supabase';
+import {
+  createSupabaseAdminClientOptional,
+  getSupabaseAdminMissingEnvMessage,
+} from '@/lib/supabase';
 import type { Database } from '@/types/db';
 import type { StoreProduct } from '@/components/store/types';
 
@@ -186,7 +189,7 @@ export async function getFavoriteProductsForProfile(
     return {
       status: 'not_configured',
       products: [],
-      message: 'Server backend is not fully configured for user actions.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -307,7 +310,7 @@ export async function getCartDataForProfile(
       items: [],
       itemCount: 0,
       subtotalCents: 0,
-      message: 'Server backend is not fully configured for user actions.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 

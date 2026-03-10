@@ -1,6 +1,9 @@
 import 'server-only';
 
-import { createSupabaseAdminClientOptional } from '@/lib/supabase';
+import {
+  createSupabaseAdminClientOptional,
+  getSupabaseAdminMissingEnvMessage,
+} from '@/lib/supabase';
 import type { Database, Json } from '@/types/db';
 
 type OrderRow = Database['public']['Tables']['orders']['Row'];
@@ -179,7 +182,7 @@ export async function placeOrderFromCartForProfile(
   if (!client) {
     return {
       status: 'not_configured',
-      message: 'Server backend is not fully configured for checkout.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -247,7 +250,7 @@ export async function getOrdersForProfile(
       orders: [],
       totalOrders: 0,
       inProgressOrders: 0,
-      message: 'Server backend is not fully configured for orders.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
@@ -343,7 +346,7 @@ export async function getOrderDetailForProfile(
     return {
       status: 'not_configured',
       order: null,
-      message: 'Server backend is not fully configured for orders.',
+      message: getSupabaseAdminMissingEnvMessage(),
     };
   }
 
