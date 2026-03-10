@@ -28,6 +28,7 @@ type CollectionRow = Database['public']['Tables']['collections']['Row'];
 type CollectionItemRow = Database['public']['Tables']['collection_items']['Row'];
 type OrderRow = Database['public']['Tables']['orders']['Row'];
 type OrderItemRow = Database['public']['Tables']['order_items']['Row'];
+type PaymentAttemptRow = Database['public']['Tables']['payment_attempts']['Row'];
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 
 interface AdminResultBase {
@@ -410,7 +411,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
 
   const [productsResult, ordersResult] = await Promise.all([
     client.from('products').select('status'),
-    client.from('orders').select('status'),
+    client.from('orders').select('status, payment_status'),
   ]);
 
   if (productsResult.error) {
@@ -436,7 +437,7 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
   }
 
   const products = (productsResult.data ?? []) as Array<Pick<ProductRow, 'status'>>;
-  const orders = (ordersResult.data ?? []) as Array<Pick<OrderRow, 'status'>>;
+  const orders = (ordersResult.data ?? []) as Array<Pick<OrderRow, 'status' | 'payment_status'>>;
 
   return {
     status: 'ok',
@@ -449,6 +450,8 @@ export async function getAdminDashboardData(): Promise<AdminDashboardResult> {
       pendingOrdersCount: orders.filter((item) =>
         ['pending', 'confirmed', 'processing'].includes(item.status),
       ).length,
+      awaitingPaymentOrdersCount: orders.filter((item) => item.payment_status !== 'paid').length,
+      paidOrdersCount: orders.filter((item) => item.payment_status === 'paid').length,
     },
   };
 }
@@ -817,7 +820,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
     };
   }
 
-  const [itemsResult, profilesResult] = await Promise.all([
+  const [itemsResult, profilesResult, attemptsResult] = await Promise.all([
     client
       .from('order_items')
       .select('order_id, quantity')
@@ -832,6 +835,14 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
         'id',
         orderRows.map((row) => row.user_id),
       ),
+    client
+      .from('payment_attempts')
+      .select('id, order_id, created_at')
+      .in(
+        'order_id',
+        orderRows.map((row) => row.id),
+      )
+      .order('created_at', { ascending: false }),
   ]);
 
   if (itemsResult.error) {
@@ -856,6 +867,17 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
     };
   }
 
+  if (attemptsResult.error) {
+    return {
+      status: 'error',
+      orders: [],
+      message: toPublicDataErrorMessage(
+        'Сейчас не удалось загрузить платёжные попытки.',
+        attemptsResult.error.message,
+      ),
+    };
+  }
+
   const profileRows = (profilesResult.data ?? []) as Array<
     Pick<ProfileRow, 'id' | 'display_name' | 'username'>
   >;
@@ -869,10 +891,21 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
     },
   );
 
+  const latestAttemptIdByOrder = new Map<string, string>();
+  ((attemptsResult.data ?? []) as Array<Pick<PaymentAttemptRow, 'id' | 'order_id'>>).forEach(
+    (attempt) => {
+      if (!latestAttemptIdByOrder.has(attempt.order_id)) {
+        latestAttemptIdByOrder.set(attempt.order_id, attempt.id);
+      }
+    },
+  );
+
   const orders: AdminOrderListItem[] = orderRows.map((row) => ({
     id: row.id,
     userId: row.user_id,
     status: row.status,
+    paymentStatus: row.payment_status,
+    paymentProvider: row.payment_provider,
     totalAmount: Number(row.total_amount),
     currency: row.currency,
     customerDisplayName:
@@ -881,6 +914,7 @@ export async function getAdminOrders(): Promise<AdminOrdersResult> {
       row.customer_username ?? profilesById.get(row.user_id)?.username ?? null,
     createdAt: row.created_at,
     itemsCount: quantityByOrder.get(row.id) ?? 0,
+    latestPaymentAttemptId: latestAttemptIdByOrder.get(row.id) ?? null,
   }));
 
   return {
@@ -904,13 +938,18 @@ export async function getAdminOrderDetail(
     };
   }
 
-  const [orderResult, orderItemsResult] = await Promise.all([
+  const [orderResult, orderItemsResult, paymentAttemptsResult] = await Promise.all([
     client.from('orders').select('*').eq('id', orderId).maybeSingle(),
     client
       .from('order_items')
       .select('*')
       .eq('order_id', orderId)
       .order('created_at', { ascending: true }),
+    client
+      .from('payment_attempts')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false }),
   ]);
 
   if (orderResult.error) {
@@ -935,6 +974,17 @@ export async function getAdminOrderDetail(
     };
   }
 
+  if (paymentAttemptsResult.error) {
+    return {
+      status: 'error',
+      order: null,
+      message: toPublicDataErrorMessage(
+        'Сейчас не удалось загрузить платёжные попытки заказа.',
+        paymentAttemptsResult.error.message,
+      ),
+    };
+  }
+
   if (!orderResult.data) {
     return {
       status: 'ok',
@@ -944,6 +994,7 @@ export async function getAdminOrderDetail(
 
   const orderRow = orderResult.data as OrderRow;
   const itemRows = (orderItemsResult.data ?? []) as OrderItemRow[];
+  const paymentAttempts = (paymentAttemptsResult.data ?? []) as PaymentAttemptRow[];
 
   const items: AdminOrderDetailItem[] = itemRows.map((row) => ({
     id: row.id,
@@ -962,6 +1013,10 @@ export async function getAdminOrderDetail(
       id: orderRow.id,
       userId: orderRow.user_id,
       status: orderRow.status,
+      paymentStatus: orderRow.payment_status,
+      paymentProvider: orderRow.payment_provider,
+      paymentCompletedAt: orderRow.payment_completed_at,
+      paymentLastError: orderRow.payment_last_error,
       subtotalAmount: Number(orderRow.subtotal_amount),
       discountAmount: Number(orderRow.discount_amount),
       totalAmount: Number(orderRow.total_amount),
@@ -973,6 +1028,17 @@ export async function getAdminOrderDetail(
       notes: orderRow.notes,
       createdAt: orderRow.created_at,
       items,
+      paymentAttempts: paymentAttempts.map((attempt) => ({
+        id: attempt.id,
+        provider: attempt.provider,
+        status: attempt.status,
+        amount: Number(attempt.amount),
+        currency: attempt.currency,
+        checkoutUrl: attempt.checkout_url,
+        expiresAt: attempt.expires_at,
+        errorMessage: attempt.error_message,
+        createdAt: attempt.created_at,
+      })),
     },
   };
 }

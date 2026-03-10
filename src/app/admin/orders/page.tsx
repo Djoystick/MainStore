@@ -5,14 +5,34 @@ import adminStyles from '@/components/admin/admin.module.css';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { classNames } from '@/css/classnames';
 import { getAdminOrders } from '@/features/admin';
+import { formatPaymentStatus } from '@/features/payments';
 import storeStyles from '@/components/store/store.module.css';
 
 function formatPrice(amount: number, currency: string) {
-  return new Intl.NumberFormat('en-US', {
+  return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
     currency: currency || 'USD',
     minimumFractionDigits: 0,
   }).format(amount);
+}
+
+function formatOrderStatus(status: string): string {
+  switch (status) {
+    case 'pending':
+      return 'Ожидает';
+    case 'confirmed':
+      return 'Подтверждён';
+    case 'processing':
+      return 'В обработке';
+    case 'shipped':
+      return 'Отправлен';
+    case 'delivered':
+      return 'Доставлен';
+    case 'cancelled':
+      return 'Отменён';
+    default:
+      return status;
+  }
 }
 
 export default async function AdminOrdersPage() {
@@ -58,10 +78,13 @@ export default async function AdminOrdersPage() {
                   <h3 className={adminStyles.adminCardTitle}>
                     Заказ #{order.id.slice(0, 8).toUpperCase()}
                   </h3>
-                  <span className={storeStyles.orderStatusBadge}>{order.status}</span>
+                  <span className={storeStyles.orderStatusBadge}>{formatOrderStatus(order.status)}</span>
                 </div>
                 <p className={adminStyles.adminCardSub}>
                   {order.customerDisplayName || order.customerUsername || order.userId}
+                </p>
+                <p className={adminStyles.adminCardSub}>
+                  Оплата: {formatPaymentStatus(order.paymentStatus)}
                 </p>
                 <div className={adminStyles.adminMetaGrid}>
                   <div className={adminStyles.adminMetaCell}>
@@ -77,13 +100,19 @@ export default async function AdminOrdersPage() {
                   <div className={adminStyles.adminMetaCell}>
                     <p className={adminStyles.adminMetaLabel}>Дата</p>
                     <p className={adminStyles.adminMetaValue}>
-                      {new Date(order.createdAt).toLocaleDateString('en-US')}
+                      {new Date(order.createdAt).toLocaleDateString('ru-RU')}
                     </p>
                   </div>
                   <div className={adminStyles.adminMetaCell}>
                     <p className={adminStyles.adminMetaLabel}>Пользователь</p>
                     <p className={adminStyles.adminMetaValue}>
                       {order.customerUsername || 'н/д'}
+                    </p>
+                  </div>
+                  <div className={adminStyles.adminMetaCell}>
+                    <p className={adminStyles.adminMetaLabel}>Платёж</p>
+                    <p className={adminStyles.adminMetaValue}>
+                      {formatPaymentStatus(order.paymentStatus)}
                     </p>
                   </div>
                 </div>

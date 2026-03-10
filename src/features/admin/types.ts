@@ -3,6 +3,8 @@ import type { AppliedDiscountSummary } from '@/features/pricing';
 
 export type ProductStatus = Database['public']['Enums']['product_status'];
 export type OrderStatus = Database['public']['Enums']['order_status'];
+export type PaymentStatus = Database['public']['Enums']['payment_status'];
+export type PaymentProvider = Database['public']['Enums']['payment_provider'];
 
 export interface AdminCategoryOption {
   id: string;
@@ -81,12 +83,15 @@ export interface AdminOrderListItem {
   id: string;
   userId: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentProvider: PaymentProvider | null;
   totalAmount: number;
   currency: string;
   customerDisplayName: string | null;
   customerUsername: string | null;
   createdAt: string;
   itemsCount: number;
+  latestPaymentAttemptId: string | null;
 }
 
 export interface AdminOrderDetailItem {
@@ -104,6 +109,10 @@ export interface AdminOrderDetail {
   id: string;
   userId: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentProvider: PaymentProvider | null;
+  paymentCompletedAt: string | null;
+  paymentLastError: string | null;
   subtotalAmount: number;
   discountAmount: number;
   totalAmount: number;
@@ -119,6 +128,17 @@ export interface AdminOrderDetail {
   notes: string | null;
   createdAt: string;
   items: AdminOrderDetailItem[];
+  paymentAttempts: Array<{
+    id: string;
+    provider: PaymentProvider;
+    status: PaymentStatus;
+    amount: number;
+    currency: string;
+    checkoutUrl: string | null;
+    expiresAt: string | null;
+    errorMessage: string | null;
+    createdAt: string;
+  }>;
 }
 
 export interface AdminDashboardData {
@@ -128,6 +148,8 @@ export interface AdminDashboardData {
   archivedProductsCount: number;
   ordersCount: number;
   pendingOrdersCount: number;
+  awaitingPaymentOrdersCount: number;
+  paidOrdersCount: number;
 }
 
 export interface ProductUpsertInput {

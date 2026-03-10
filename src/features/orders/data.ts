@@ -1,18 +1,18 @@
-import 'server-only';
+﻿import 'server-only';
 
 import {
   createSupabaseAdminClientOptional,
   getSupabaseAdminMissingEnvMessage,
 } from '@/lib/supabase';
-import { resolvePricingForProducts } from '@/features/pricing';
 import type { Database, Json } from '@/types/db';
+import { canRetryPayment } from '@/features/payments';
 
-type CartItemRow = Database['public']['Tables']['cart_items']['Row'];
-type ProductRow = Database['public']['Tables']['products']['Row'];
-type ProductImageRow = Database['public']['Tables']['product_images']['Row'];
 type OrderRow = Database['public']['Tables']['orders']['Row'];
 type OrderItemRow = Database['public']['Tables']['order_items']['Row'];
+type PaymentAttemptRow = Database['public']['Tables']['payment_attempts']['Row'];
 type OrderStatus = Database['public']['Enums']['order_status'];
+type PaymentStatus = Database['public']['Enums']['payment_status'];
+type PaymentProvider = Database['public']['Enums']['payment_provider'];
 
 interface ShippingAddressSnapshot {
   city: string | null;
@@ -23,10 +23,14 @@ interface ShippingAddressSnapshot {
 export interface OrderListItem {
   id: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentProvider: PaymentProvider | null;
   totalCents: number;
   currency: string;
   createdAt: string;
   itemsCount: number;
+  latestPaymentAttemptId: string | null;
+  canRetryPayment: boolean;
 }
 
 export interface OrderListResult {
@@ -51,6 +55,10 @@ export interface OrderDetailItem {
 export interface OrderDetail {
   id: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentProvider: PaymentProvider | null;
+  paymentCompletedAt: string | null;
+  paymentLastError: string | null;
   totalCents: number;
   subtotalCents: number;
   discountCents: number;
@@ -61,6 +69,14 @@ export interface OrderDetail {
   shippingAddress: ShippingAddressSnapshot;
   notes: string | null;
   items: OrderDetailItem[];
+  latestPaymentAttempt: {
+    id: string;
+    status: PaymentStatus;
+    provider: PaymentProvider;
+    checkoutUrl: string | null;
+    expiresAt: string | null;
+  } | null;
+  canRetryPayment: boolean;
 }
 
 export interface OrderDetailResult {
@@ -74,32 +90,6 @@ export interface OrderDetailResult {
   message?: string;
 }
 
-export interface CheckoutPayload {
-  fullName: string;
-  phone: string;
-  city: string;
-  addressLine: string;
-  postalCode?: string | null;
-  notes?: string | null;
-}
-
-export interface PlaceOrderResult {
-  status:
-    | 'ok'
-    | 'unauthorized'
-    | 'not_configured'
-    | 'invalid_input'
-    | 'empty_cart'
-    | 'unavailable_items'
-    | 'mixed_currency'
-    | 'error';
-  orderId?: string;
-  totalCents?: number;
-  currency?: string;
-  itemsCount?: number;
-  message?: string;
-}
-
 function toPriceCents(price: unknown): number {
   if (typeof price === 'number' && Number.isFinite(price)) {
     return Math.round(price * 100);
@@ -107,10 +97,6 @@ function toPriceCents(price: unknown): number {
 
   const parsed = Number(price);
   return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
-}
-
-function roundToMoney(value: number): number {
-  return Math.round(value * 100) / 100;
 }
 
 function parseShippingAddress(shippingAddress: Json): ShippingAddressSnapshot {
@@ -135,266 +121,11 @@ function parseShippingAddress(shippingAddress: Json): ShippingAddressSnapshot {
   };
 }
 
-function normalizeField(value: string | null | undefined, maxLength: number): string {
-  return (value ?? '').trim().slice(0, maxLength);
-}
-
-function validateCheckoutPayload(payload: CheckoutPayload): string | null {
-  if (!normalizeField(payload.fullName, 120)) {
-    return 'full_name_required';
-  }
-  if (!normalizeField(payload.phone, 40)) {
-    return 'phone_required';
-  }
-  if (!normalizeField(payload.city, 120)) {
-    return 'city_required';
-  }
-  if (!normalizeField(payload.addressLine, 240)) {
-    return 'address_required';
-  }
-  return null;
-}
-
-function mapOrderCreationError(message: string): PlaceOrderResult['status'] {
-  if (message.includes('cart_empty')) {
-    return 'empty_cart';
-  }
-  if (message.includes('cart_contains_unavailable_items')) {
-    return 'unavailable_items';
-  }
-  if (message.includes('mixed_currency_not_supported')) {
-    return 'mixed_currency';
-  }
-  if (message.includes('unauthorized')) {
-    return 'unauthorized';
-  }
-  return 'error';
-}
-
-function selectPrimaryImage(images: ProductImageRow[]): ProductImageRow | null {
-  if (images.length === 0) {
-    return null;
-  }
-
-  return [...images].sort((left, right) => {
-    if (left.is_primary !== right.is_primary) {
-      return left.is_primary ? -1 : 1;
-    }
-    if (left.sort_order !== right.sort_order) {
-      return left.sort_order - right.sort_order;
-    }
-    return left.created_at.localeCompare(right.created_at);
-  })[0] ?? null;
-}
-
 function toPublicDataErrorMessage(baseMessage: string, details: string): string {
   if (process.env.NODE_ENV === 'development') {
     return `${baseMessage} Подробности: ${details}`;
   }
   return baseMessage;
-}
-
-export async function placeOrderFromCartForProfile(
-  profileId: string | null,
-  payload: CheckoutPayload,
-): Promise<PlaceOrderResult> {
-  if (!profileId) {
-    return { status: 'unauthorized' };
-  }
-
-  const validationError = validateCheckoutPayload(payload);
-  if (validationError) {
-    return {
-      status: 'invalid_input',
-      message: validationError,
-    };
-  }
-
-  const client = createSupabaseAdminClientOptional();
-  if (!client) {
-    return {
-      status: 'not_configured',
-      message: toPublicDataErrorMessage(
-        'Оформление заказа временно недоступно.',
-        getSupabaseAdminMissingEnvMessage(),
-      ),
-    };
-  }
-
-  try {
-    const [cartResult, profileResult] = await Promise.all([
-      client
-        .from('cart_items')
-        .select('*')
-        .eq('user_id', profileId)
-        .order('updated_at', { ascending: false }),
-      client
-        .from('profiles')
-        .select('username')
-        .eq('id', profileId)
-        .maybeSingle(),
-    ]);
-
-    if (cartResult.error) {
-      throw new Error(cartResult.error.message);
-    }
-    if (profileResult.error) {
-      throw new Error(profileResult.error.message);
-    }
-
-    const cartRows = (cartResult.data ?? []) as CartItemRow[];
-    if (cartRows.length === 0) {
-      return { status: 'empty_cart' };
-    }
-
-    const productIds = cartRows.map((row) => row.product_id);
-    const productsResult = await client
-      .from('products')
-      .select('*')
-      .in('id', productIds)
-      .eq('status', 'active');
-
-    if (productsResult.error) {
-      throw new Error(productsResult.error.message);
-    }
-
-    const productRows = (productsResult.data ?? []) as ProductRow[];
-    if (productRows.length !== productIds.length) {
-      return { status: 'unavailable_items' };
-    }
-
-    const distinctCurrencies = new Set(productRows.map((row) => row.currency));
-    if (distinctCurrencies.size > 1) {
-      return { status: 'mixed_currency' };
-    }
-
-    const imagesResult = await client
-      .from('product_images')
-      .select('*')
-      .in('product_id', productIds);
-
-    if (imagesResult.error) {
-      throw new Error(imagesResult.error.message);
-    }
-
-    const imageRows = (imagesResult.data ?? []) as ProductImageRow[];
-    const imagesByProductId = new Map<string, ProductImageRow[]>();
-    imageRows.forEach((image) => {
-      const bucket = imagesByProductId.get(image.product_id);
-      if (bucket) {
-        bucket.push(image);
-        return;
-      }
-      imagesByProductId.set(image.product_id, [image]);
-    });
-
-    const pricingByProductId = await resolvePricingForProducts(client, productRows);
-    const productsById = new Map(productRows.map((row) => [row.id, row]));
-    const currency = productRows[0]?.currency ?? 'USD';
-
-    const lineItems = cartRows.map((cartRow) => {
-      const product = productsById.get(cartRow.product_id);
-      if (!product) {
-        return null;
-      }
-
-      const pricing = pricingByProductId.get(product.id);
-      const basePrice = pricing?.basePrice ?? Number(product.price) ?? 0;
-      const unitPrice = pricing?.effectivePrice ?? basePrice;
-      const primaryImage = selectPrimaryImage(imagesByProductId.get(product.id) ?? []);
-
-      return {
-        product,
-        quantity: cartRow.quantity,
-        baseLineTotal: roundToMoney(basePrice * cartRow.quantity),
-        discountTotal: roundToMoney((pricing?.discountAmount ?? 0) * cartRow.quantity),
-        unitPrice,
-        productImageUrl: primaryImage?.url ?? null,
-      };
-    }).filter((item): item is NonNullable<typeof item> => Boolean(item));
-
-    if (lineItems.length !== cartRows.length) {
-      return { status: 'unavailable_items' };
-    }
-
-    const subtotalAmount = roundToMoney(
-      lineItems.reduce((sum, item) => sum + item.baseLineTotal, 0),
-    );
-    const discountAmount = roundToMoney(
-      lineItems.reduce((sum, item) => sum + item.discountTotal, 0),
-    );
-    const totalAmount = roundToMoney(Math.max(0, subtotalAmount - discountAmount));
-
-    const orderInsertResult = await client
-      .from('orders')
-      .insert(
-        {
-          user_id: profileId,
-          status: 'pending',
-          subtotal_amount: subtotalAmount,
-          discount_amount: discountAmount,
-          shipping_amount: 0,
-          total_amount: totalAmount,
-          currency,
-          customer_display_name: normalizeField(payload.fullName, 120),
-          customer_username:
-            (profileResult.data as { username?: string | null } | null)?.username ?? null,
-          customer_phone: normalizeField(payload.phone, 40),
-          shipping_address: {
-            city: normalizeField(payload.city, 120),
-            address_line: normalizeField(payload.addressLine, 240),
-            postal_code: normalizeField(payload.postalCode, 40) || null,
-          },
-          notes: normalizeField(payload.notes, 500) || null,
-        } as never,
-      )
-      .select('id')
-      .single();
-
-    const orderRow = orderInsertResult.data as Pick<OrderRow, 'id'> | null;
-    if (orderInsertResult.error || !orderRow) {
-      throw new Error(orderInsertResult.error?.message ?? 'create_order_failed');
-    }
-
-    const orderItemsResult = await client.from('order_items').insert(
-      lineItems.map((item) => ({
-        order_id: orderRow.id,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        product_title: item.product.title,
-        product_slug: item.product.slug,
-        product_image_url: item.productImageUrl,
-        unit_price: item.unitPrice,
-        currency: item.product.currency,
-      })) as never,
-    );
-
-    if (orderItemsResult.error) {
-      await client.from('orders').delete().eq('id', orderRow.id);
-      throw new Error(orderItemsResult.error.message);
-    }
-
-    const clearCartResult = await client.from('cart_items').delete().eq('user_id', profileId);
-    if (clearCartResult.error) {
-      throw new Error(clearCartResult.error.message);
-    }
-
-    return {
-      status: 'ok',
-      orderId: orderRow.id,
-      totalCents: toPriceCents(totalAmount),
-      currency,
-      itemsCount: lineItems.length,
-    };
-  } catch (error) {
-    return {
-      status: mapOrderCreationError(error instanceof Error ? error.message : 'unknown_checkout_error'),
-      message: toPublicDataErrorMessage(
-        'Сейчас не удалось оформить заказ.',
-        error instanceof Error ? error.message : 'Неизвестная ошибка оформления.',
-      ),
-    };
-  }
 }
 
 export async function getOrdersForProfile(
@@ -425,7 +156,7 @@ export async function getOrdersForProfile(
 
   const ordersResult = await client
     .from('orders')
-    .select('id, status, total_amount, currency, created_at')
+    .select('id, status, payment_status, payment_provider, total_amount, currency, created_at')
     .eq('user_id', profileId)
     .order('created_at', { ascending: false });
 
@@ -443,7 +174,10 @@ export async function getOrdersForProfile(
   }
 
   const orderRows = (ordersResult.data ?? []) as Array<
-    Pick<OrderRow, 'id' | 'status' | 'total_amount' | 'currency' | 'created_at'>
+    Pick<
+      OrderRow,
+      'id' | 'status' | 'payment_status' | 'payment_provider' | 'total_amount' | 'currency' | 'created_at'
+    >
   >;
 
   if (orderRows.length === 0) {
@@ -456,10 +190,14 @@ export async function getOrdersForProfile(
   }
 
   const orderIds = orderRows.map((row) => row.id);
-  const itemsResult = await client
-    .from('order_items')
-    .select('order_id, quantity')
-    .in('order_id', orderIds);
+  const [itemsResult, attemptsResult] = await Promise.all([
+    client.from('order_items').select('order_id, quantity').in('order_id', orderIds),
+    client
+      .from('payment_attempts')
+      .select('id, order_id, status, provider, checkout_url, expires_at, created_at')
+      .in('order_id', orderIds)
+      .order('created_at', { ascending: false }),
+  ]);
 
   if (itemsResult.error) {
     return {
@@ -474,8 +212,22 @@ export async function getOrdersForProfile(
     };
   }
 
-  const itemRows = (itemsResult.data ?? []) as Array<
-    Pick<OrderItemRow, 'order_id' | 'quantity'>
+  if (attemptsResult.error) {
+    return {
+      status: 'error',
+      orders: [],
+      totalOrders: 0,
+      inProgressOrders: 0,
+      message: toPublicDataErrorMessage(
+        'Сейчас не удалось загрузить платёжные попытки.',
+        attemptsResult.error.message,
+      ),
+    };
+  }
+
+  const itemRows = (itemsResult.data ?? []) as Array<Pick<OrderItemRow, 'order_id' | 'quantity'>>;
+  const attemptRows = (attemptsResult.data ?? []) as Array<
+    Pick<PaymentAttemptRow, 'id' | 'order_id' | 'status' | 'provider' | 'checkout_url' | 'expires_at' | 'created_at'>
   >;
 
   const itemsCountByOrderId = new Map<string, number>();
@@ -484,14 +236,28 @@ export async function getOrdersForProfile(
     itemsCountByOrderId.set(row.order_id, existing + row.quantity);
   });
 
-  const orders: OrderListItem[] = orderRows.map((row) => ({
-    id: row.id,
-    status: row.status,
-    totalCents: toPriceCents(row.total_amount),
-    currency: row.currency,
-    createdAt: row.created_at,
-    itemsCount: itemsCountByOrderId.get(row.id) ?? 0,
-  }));
+  const latestAttemptByOrderId = new Map<string, (typeof attemptRows)[number]>();
+  attemptRows.forEach((row) => {
+    if (!latestAttemptByOrderId.has(row.order_id)) {
+      latestAttemptByOrderId.set(row.order_id, row);
+    }
+  });
+
+  const orders: OrderListItem[] = orderRows.map((row) => {
+    const latestAttempt = latestAttemptByOrderId.get(row.id) ?? null;
+    return {
+      id: row.id,
+      status: row.status,
+      paymentStatus: row.payment_status,
+      paymentProvider: row.payment_provider,
+      totalCents: toPriceCents(row.total_amount),
+      currency: row.currency,
+      createdAt: row.created_at,
+      itemsCount: itemsCountByOrderId.get(row.id) ?? 0,
+      latestPaymentAttemptId: latestAttempt?.id ?? null,
+      canRetryPayment: canRetryPayment(row.payment_status, row.status),
+    };
+  });
 
   const inProgressOrders = orders.filter(
     (order) => !['delivered', 'cancelled'].includes(order.status),
@@ -531,7 +297,7 @@ export async function getOrderDetailForProfile(
   const orderResult = await client
     .from('orders')
     .select(
-      'id, status, total_amount, subtotal_amount, discount_amount, currency, created_at, customer_display_name, customer_phone, shipping_address, notes',
+      'id, status, payment_status, payment_provider, payment_completed_at, payment_last_error, total_amount, subtotal_amount, discount_amount, currency, created_at, customer_display_name, customer_phone, shipping_address, notes',
     )
     .eq('user_id', profileId)
     .eq('id', orderId)
@@ -559,6 +325,10 @@ export async function getOrderDetailForProfile(
     OrderRow,
     | 'id'
     | 'status'
+    | 'payment_status'
+    | 'payment_provider'
+    | 'payment_completed_at'
+    | 'payment_last_error'
     | 'total_amount'
     | 'subtotal_amount'
     | 'discount_amount'
@@ -570,13 +340,22 @@ export async function getOrderDetailForProfile(
     | 'notes'
   >;
 
-  const itemsResult = await client
-    .from('order_items')
-    .select(
-      'id, quantity, product_title, product_slug, product_image_url, unit_price, line_total, currency',
-    )
-    .eq('order_id', orderRow.id)
-    .order('created_at', { ascending: true });
+  const [itemsResult, attemptResult] = await Promise.all([
+    client
+      .from('order_items')
+      .select(
+        'id, quantity, product_title, product_slug, product_image_url, unit_price, line_total, currency',
+      )
+      .eq('order_id', orderRow.id)
+      .order('created_at', { ascending: true }),
+    client
+      .from('payment_attempts')
+      .select('id, status, provider, checkout_url, expires_at, created_at')
+      .eq('order_id', orderRow.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (itemsResult.error) {
     return {
@@ -585,6 +364,17 @@ export async function getOrderDetailForProfile(
       message: toPublicDataErrorMessage(
         'Сейчас не удалось загрузить позиции заказа.',
         itemsResult.error.message,
+      ),
+    };
+  }
+
+  if (attemptResult.error) {
+    return {
+      status: 'error',
+      order: null,
+      message: toPublicDataErrorMessage(
+        'Сейчас не удалось загрузить платёжный статус заказа.',
+        attemptResult.error.message,
       ),
     };
   }
@@ -603,6 +393,11 @@ export async function getOrderDetailForProfile(
     >
   >;
 
+  const latestAttempt = (attemptResult.data ?? null) as Pick<
+    PaymentAttemptRow,
+    'id' | 'status' | 'provider' | 'checkout_url' | 'expires_at' | 'created_at'
+  > | null;
+
   const items: OrderDetailItem[] = itemRows.map((item) => ({
     id: item.id,
     quantity: item.quantity,
@@ -619,6 +414,10 @@ export async function getOrderDetailForProfile(
     order: {
       id: orderRow.id,
       status: orderRow.status,
+      paymentStatus: orderRow.payment_status,
+      paymentProvider: orderRow.payment_provider,
+      paymentCompletedAt: orderRow.payment_completed_at,
+      paymentLastError: orderRow.payment_last_error,
       totalCents: toPriceCents(orderRow.total_amount),
       subtotalCents: toPriceCents(orderRow.subtotal_amount),
       discountCents: toPriceCents(orderRow.discount_amount),
@@ -629,6 +428,16 @@ export async function getOrderDetailForProfile(
       shippingAddress: parseShippingAddress(orderRow.shipping_address),
       notes: orderRow.notes,
       items,
+      latestPaymentAttempt: latestAttempt
+        ? {
+            id: latestAttempt.id,
+            status: latestAttempt.status,
+            provider: latestAttempt.provider,
+            checkoutUrl: latestAttempt.checkout_url,
+            expiresAt: latestAttempt.expires_at,
+          }
+        : null,
+      canRetryPayment: canRetryPayment(orderRow.payment_status, orderRow.status),
     },
   };
 }

@@ -42,6 +42,8 @@ export type {
   CategoryUpsertInput,
   CollectionUpsertInput,
   OrderStatus,
+  PaymentProvider,
+  PaymentStatus,
   ProductImageUpsertInput,
   ProductStatus,
   ProductUpsertInput,

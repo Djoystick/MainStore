@@ -60,6 +60,16 @@ export default async function AdminPage() {
                   {dashboard.dashboard.pendingOrdersCount}
                 </p>
               </div>
+              <div className={storeStyles.infoItem}>
+                <p className={storeStyles.infoLabel}>Ждут оплаты</p>
+                <p className={storeStyles.infoValue}>
+                  {dashboard.dashboard.awaitingPaymentOrdersCount}
+                </p>
+              </div>
+              <div className={storeStyles.infoItem}>
+                <p className={storeStyles.infoLabel}>Оплачены</p>
+                <p className={storeStyles.infoValue}>{dashboard.dashboard.paidOrdersCount}</p>
+              </div>
             </div>
           </section>
 

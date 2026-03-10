@@ -6,6 +6,7 @@ import { StoreSection } from '@/components/store/StoreSection';
 import { formatStorePrice } from '@/components/store/formatPrice';
 import { classNames } from '@/css/classnames';
 import { getCurrentUserContext } from '@/features/auth';
+import { formatPaymentStatus } from '@/features/payments';
 import { getOrdersForProfile } from '@/features/orders/data';
 import { getUserStoreSummaryForProfile } from '@/features/user-store/data';
 import styles from '@/components/store/store.module.css';
@@ -110,6 +111,9 @@ export default async function ProfilePage() {
                 </div>
                 <p className={styles.orderMetaItem}>
                   {formatStorePrice(latestOrder.totalCents, latestOrder.currency)}
+                </p>
+                <p className={styles.orderMetaItem}>
+                  Оплата: {formatPaymentStatus(latestOrder.paymentStatus)}
                 </p>
               </Link>
             </StoreSection>

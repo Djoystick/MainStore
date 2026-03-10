@@ -1,4 +1,4 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
@@ -25,7 +25,7 @@ export default async function CheckoutPage() {
   const discountLabel = formatStorePrice(cartData.discountTotalCents, currency);
 
   return (
-    <StoreScreen title="Оформление" subtitle="Данные доставки и проверка заказа" back={true}>
+    <StoreScreen title="Оформление" subtitle="Доставка, сумма и переход к оплате" back={true}>
       {cartData.message && (
         <section
           className={classNames(
@@ -52,7 +52,7 @@ export default async function CheckoutPage() {
       {isUnauthorized ? (
         <StoreEmptyState
           title="Нужна сессия Telegram"
-          description="Откройте MainStore в Telegram, чтобы оформлять заказы."
+          description="Откройте MainStore в Telegram, чтобы оформить и оплатить заказ."
           actionLabel="Открыть каталог"
           actionHref="/catalog"
         />
@@ -105,11 +105,12 @@ export default async function CheckoutPage() {
 
           <section className={styles.panel}>
             <p className={styles.panelText}>
-              Цена и наличие подтверждаются на сервере в момент оформления заказа.
+              Цена и скидки подтверждаются на сервере при создании заказа. После этого открывается
+              платёжная сессия, а заказ получает отдельный payment status.
             </p>
           </section>
 
-          <StoreSection title="Доставка">
+          <StoreSection title="Доставка и оплата">
             <CheckoutForm
               initialFullName={profile?.displayName}
               subtotalCents={cartData.baseSubtotalCents}
@@ -119,11 +120,7 @@ export default async function CheckoutPage() {
             />
           </StoreSection>
 
-          <Link
-            href="/cart"
-            className={styles.secondaryInlineLink}
-            aria-label="Вернуться в корзину"
-          >
+          <Link href="/cart" className={styles.secondaryInlineLink} aria-label="Вернуться в корзину">
             Вернуться в корзину
           </Link>
         </>

@@ -1328,6 +1328,78 @@
   background: var(--store-surface-muted);
 }
 
+.paymentStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--store-border);
+  padding: 0 10px;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
+  color: var(--store-text);
+  background: var(--store-surface-muted);
+}
+
+.paymentStatusPending {
+  color: #9e5b00;
+  background: rgba(250, 207, 122, 0.24);
+  border-color: rgba(158, 91, 0, 0.3);
+}
+
+.paymentStatusAction {
+  color: #2d63f1;
+  background: rgba(45, 99, 241, 0.14);
+  border-color: rgba(45, 99, 241, 0.35);
+}
+
+.paymentStatusPaid {
+  color: #2c7d4b;
+  background: rgba(77, 184, 120, 0.14);
+  border-color: rgba(44, 125, 75, 0.32);
+}
+
+.paymentStatusFailed {
+  color: #b33b3b;
+  background: rgba(211, 78, 78, 0.13);
+  border-color: rgba(179, 59, 59, 0.34);
+}
+
+.paymentStatusCancelled {
+  color: #7f4c9d;
+  background: rgba(150, 112, 184, 0.14);
+  border-color: rgba(127, 76, 157, 0.3);
+}
+
+.paymentStatusExpired {
+  color: #5f6570;
+  background: rgba(95, 101, 112, 0.12);
+  border-color: rgba(95, 101, 112, 0.24);
+}
+
+.paymentBadgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.paymentActionGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.paymentAmount {
+  margin: 10px 0 0;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
 .orderStatusPending {
   color: #9e5b00;
   background: rgba(250, 207, 122, 0.24);

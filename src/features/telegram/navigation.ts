@@ -11,6 +11,10 @@ export function resolveTelegramBackFallback(pathname: string): string {
     return '/cart';
   }
 
+  if (pathname.startsWith('/pay/sandbox/')) {
+    return '/orders';
+  }
+
   if (pathname.startsWith('/orders/')) {
     return '/orders';
   }

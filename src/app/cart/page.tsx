@@ -159,9 +159,9 @@ export default async function CartPage() {
       )}
 
       <section className={styles.panel}>
-        <h2 className={styles.panelTitle}>Оплата пока не подключена</h2>
+        <h2 className={styles.panelTitle}>Следующий шаг</h2>
         <p className={styles.panelText}>
-          На этом этапе платежные провайдеры намеренно не подключены.
+          На оформлении заказ создаётся с отдельным payment status, а затем открывается платёжная сессия.
         </p>
       </section>
     </StoreScreen>

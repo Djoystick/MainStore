@@ -798,6 +798,28 @@ export async function updateAdminOrderStatus(
     return { ok: false, error: 'not_configured' };
   }
 
+  const orderResult = await client
+    .from('orders')
+    .select('id, status, payment_status')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (orderResult.error || !orderResult.data) {
+    return { ok: false, error: orderResult.error?.message || 'order_not_found' };
+  }
+
+  const orderRow = orderResult.data as Pick<
+    Database['public']['Tables']['orders']['Row'],
+    'id' | 'status' | 'payment_status'
+  >;
+
+  if (
+    orderRow.payment_status !== 'paid' &&
+    ['confirmed', 'processing', 'shipped', 'delivered'].includes(status)
+  ) {
+    return { ok: false, error: 'payment_not_completed' };
+  }
+
   const result = await client
     .from('orders')
     .update({ status } as never)

@@ -6,6 +6,7 @@ import { StoreSection } from '@/components/store/StoreSection';
 import { formatStorePrice } from '@/components/store/formatPrice';
 import { classNames } from '@/css/classnames';
 import { getCurrentUserContext } from '@/features/auth';
+import { formatPaymentStatus } from '@/features/payments';
 import { getOrdersForProfile } from '@/features/orders/data';
 import styles from '@/components/store/store.module.css';
 
@@ -50,6 +51,25 @@ function getOrderStatusClass(status: string): string {
       return styles.orderStatusDelivered;
     case 'cancelled':
       return styles.orderStatusCancelled;
+    default:
+      return '';
+  }
+}
+
+function getPaymentStatusClass(status: string): string {
+  switch (status) {
+    case 'pending':
+      return styles.paymentStatusPending;
+    case 'requires_action':
+      return styles.paymentStatusAction;
+    case 'paid':
+      return styles.paymentStatusPaid;
+    case 'failed':
+      return styles.paymentStatusFailed;
+    case 'cancelled':
+      return styles.paymentStatusCancelled;
+    case 'expired':
+      return styles.paymentStatusExpired;
     default:
       return '';
   }
@@ -130,6 +150,8 @@ export default async function OrdersPage() {
                   <p className={styles.orderCardId}>
                     Заказ #{order.id.slice(0, 8).toUpperCase()}
                   </p>
+                </div>
+                <div className={styles.paymentBadgeRow}>
                   <span
                     className={classNames(
                       styles.orderStatusBadge,
@@ -138,13 +160,23 @@ export default async function OrdersPage() {
                   >
                     {formatOrderStatus(order.status)}
                   </span>
+                  <span
+                    className={classNames(
+                      styles.paymentStatusBadge,
+                      getPaymentStatusClass(order.paymentStatus),
+                    )}
+                  >
+                    {formatPaymentStatus(order.paymentStatus)}
+                  </span>
                 </div>
                 <div className={styles.orderMetaGrid}>
                   <p className={styles.orderMetaItem}>{formatOrderDate(order.createdAt)}</p>
                   <p className={styles.orderMetaItem}>
                     {formatStorePrice(order.totalCents, order.currency)}
                   </p>
-                  <p className={styles.orderMetaItem}>{order.itemsCount} шт.</p>
+                  <p className={styles.orderMetaItem}>
+                    {order.canRetryPayment ? 'Требует оплаты' : `${order.itemsCount} шт.`}
+                  </p>
                 </div>
               </Link>
             ))}

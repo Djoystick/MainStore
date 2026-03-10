@@ -10,6 +10,14 @@ export type AppRole = 'user' | 'admin';
 export type ProductStatus = 'draft' | 'active' | 'archived';
 export type DiscountScope = 'product' | 'category' | 'collection';
 export type DiscountType = 'fixed' | 'percentage';
+export type PaymentStatus =
+  | 'pending'
+  | 'requires_action'
+  | 'paid'
+  | 'failed'
+  | 'cancelled'
+  | 'expired';
+export type PaymentProvider = 'legacy' | 'sandbox';
 export type OrderStatus =
   | 'pending'
   | 'confirmed'
@@ -317,6 +325,12 @@ export interface Database {
           id: string;
           user_id: string;
           status: OrderStatus;
+          checkout_idempotency_key: string | null;
+          payment_status: PaymentStatus;
+          payment_provider: PaymentProvider | null;
+          payment_completed_at: string | null;
+          payment_last_error: string | null;
+          payment_reference: string | null;
           subtotal_amount: number;
           discount_amount: number;
           shipping_amount: number;
@@ -334,6 +348,12 @@ export interface Database {
           id?: string;
           user_id: string;
           status?: OrderStatus;
+          checkout_idempotency_key?: string | null;
+          payment_status?: PaymentStatus;
+          payment_provider?: PaymentProvider | null;
+          payment_completed_at?: string | null;
+          payment_last_error?: string | null;
+          payment_reference?: string | null;
           subtotal_amount?: number;
           discount_amount?: number;
           shipping_amount?: number;
@@ -351,6 +371,12 @@ export interface Database {
           id?: string;
           user_id?: string;
           status?: OrderStatus;
+          checkout_idempotency_key?: string | null;
+          payment_status?: PaymentStatus;
+          payment_provider?: PaymentProvider | null;
+          payment_completed_at?: string | null;
+          payment_last_error?: string | null;
+          payment_reference?: string | null;
           subtotal_amount?: number;
           discount_amount?: number;
           shipping_amount?: number;
@@ -406,6 +432,65 @@ export interface Database {
           created_at?: string;
         };
       };
+      payment_attempts: {
+        Row: {
+          id: string;
+          order_id: string;
+          user_id: string;
+          provider: PaymentProvider;
+          status: PaymentStatus;
+          idempotency_key: string;
+          amount: number;
+          currency: string;
+          checkout_url: string | null;
+          provider_reference: string | null;
+          error_code: string | null;
+          error_message: string | null;
+          metadata: Json;
+          expires_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          user_id: string;
+          provider: PaymentProvider;
+          status?: PaymentStatus;
+          idempotency_key: string;
+          amount: number;
+          currency?: string;
+          checkout_url?: string | null;
+          provider_reference?: string | null;
+          error_code?: string | null;
+          error_message?: string | null;
+          metadata?: Json;
+          expires_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          user_id?: string;
+          provider?: PaymentProvider;
+          status?: PaymentStatus;
+          idempotency_key?: string;
+          amount?: number;
+          currency?: string;
+          checkout_url?: string | null;
+          provider_reference?: string | null;
+          error_code?: string | null;
+          error_message?: string | null;
+          metadata?: Json;
+          expires_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -432,6 +517,8 @@ export interface Database {
       app_role: AppRole;
       discount_scope: DiscountScope;
       discount_type: DiscountType;
+      payment_provider: PaymentProvider;
+      payment_status: PaymentStatus;
       product_status: ProductStatus;
       order_status: OrderStatus;
     };

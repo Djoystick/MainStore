@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useRef, useState, useTransition, type FormEventHandler } from 'react';
+import { useMemo, useRef, useState, useTransition, type FormEventHandler } from 'react';
 import Link from 'next/link';
 
 import { classNames } from '@/css/classnames';
@@ -17,32 +17,31 @@ interface CheckoutFormProps {
   currency: string;
 }
 
-interface PlaceOrderSuccess {
+interface PaymentStartSuccess {
   orderId: string;
+  paymentAttemptId: string;
+  checkoutUrl: string | null;
   totalCents: number;
   currency: string;
 }
 
 function mapCheckoutError(error: string): string {
-  if (error === 'unauthorized') {
-    return 'Откройте MainStore в Telegram, чтобы оформить заказ.';
+  switch (error) {
+    case 'unauthorized':
+      return 'Откройте MainStore в Telegram, чтобы перейти к оплате.';
+    case 'invalid_input':
+      return 'Заполните обязательные поля доставки.';
+    case 'empty_cart':
+      return 'Корзина пуста. Добавьте товары и попробуйте снова.';
+    case 'unavailable_items':
+      return 'Часть товаров больше недоступна. Проверьте корзину.';
+    case 'mixed_currency':
+      return 'В одном заказе поддерживается только одна валюта.';
+    case 'not_configured':
+      return 'Платёжный слой временно недоступен.';
+    default:
+      return 'Не удалось запустить оплату. Попробуйте ещё раз.';
   }
-  if (error === 'invalid_input') {
-    return 'Заполните обязательные поля доставки.';
-  }
-  if (error === 'empty_cart') {
-    return 'Корзина пуста. Добавьте товары и попробуйте снова.';
-  }
-  if (error === 'unavailable_items') {
-    return 'Часть товаров больше недоступна. Проверьте корзину.';
-  }
-  if (error === 'mixed_currency') {
-    return 'В одном заказе поддерживается только одна валюта.';
-  }
-  if (error === 'not_configured') {
-    return 'Оформление временно недоступно.';
-  }
-  return 'Не удалось оформить заказ. Попробуйте еще раз.';
 }
 
 export function CheckoutForm({
@@ -61,13 +60,19 @@ export function CheckoutForm({
   const [postalCode, setPostalCode] = useState('');
   const [notes, setNotes] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [success, setSuccess] = useState<PlaceOrderSuccess | null>(null);
+  const [startedPayment, setStartedPayment] = useState<PaymentStartSuccess | null>(null);
   const isSubmittingRef = useRef(false);
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
+
+  const paymentSummaryLabel = useMemo(
+    () => formatStorePrice(totalCents, currency),
+    [currency, totalCents],
+  );
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
     event.preventDefault();
 
-    if (isPending || isSubmittingRef.current || success) {
+    if (isPending || isSubmittingRef.current) {
       return;
     }
 
@@ -77,7 +82,7 @@ export function CheckoutForm({
       setErrorMessage(null);
 
       try {
-        const response = await fetch('/api/store/checkout/place-order', {
+        const response = await fetch('/api/store/checkout/start-payment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -88,6 +93,7 @@ export function CheckoutForm({
             addressLine,
             postalCode,
             notes,
+            idempotencyKey: idempotencyKeyRef.current,
           }),
         });
 
@@ -95,6 +101,8 @@ export function CheckoutForm({
           | {
               ok: true;
               orderId: string;
+              paymentAttemptId: string;
+              checkoutUrl?: string | null;
               totalCents: number;
               currency: string;
             }
@@ -110,42 +118,46 @@ export function CheckoutForm({
           return;
         }
 
-        setSuccess({
+        const nextState = {
           orderId: payload.orderId,
+          paymentAttemptId: payload.paymentAttemptId,
+          checkoutUrl: payload.checkoutUrl ?? null,
           totalCents: payload.totalCents,
           currency: payload.currency,
-        });
+        };
+
+        setStartedPayment(nextState);
+
+        if (payload.checkoutUrl) {
+          window.location.assign(payload.checkoutUrl);
+          return;
+        }
       } catch {
-        setErrorMessage('Сетевая ошибка при оформлении заказа.');
+        setErrorMessage('Сетевая ошибка при запуске оплаты.');
       } finally {
         isSubmittingRef.current = false;
       }
     });
   };
 
-  if (success) {
+  if (startedPayment) {
     return (
       <section className={styles.checkoutSuccess}>
-        <h2 className={styles.checkoutSuccessTitle}>Заказ оформлен</h2>
+        <h2 className={styles.checkoutSuccessTitle}>Заказ готов к оплате</h2>
         <p className={styles.checkoutSuccessText}>
-          Итого: {formatStorePrice(success.totalCents, success.currency)}
+          Сумма к оплате: {formatStorePrice(startedPayment.totalCents, startedPayment.currency)}
         </p>
         <p className={styles.checkoutHint}>
-          Номер заказа: #{success.orderId.slice(0, 8).toUpperCase()}
+          Заказ #{startedPayment.orderId.slice(0, 8).toUpperCase()} создан. Если автоматический
+          переход не сработал, откройте платёжный шаг вручную.
         </p>
-        <Link
-          href={`/orders/${success.orderId}`}
-          className={styles.primaryLinkButton}
-          aria-label="Открыть созданный заказ"
-        >
+        {startedPayment.checkoutUrl && (
+          <Link href={startedPayment.checkoutUrl} className={styles.primaryLinkButton}>
+            Перейти к оплате
+          </Link>
+        )}
+        <Link href={`/orders/${startedPayment.orderId}`} className={styles.secondaryInlineLink}>
           Открыть заказ
-        </Link>
-        <Link
-          href="/catalog"
-          className={styles.secondaryInlineLink}
-          aria-label="Продолжить покупки"
-        >
-          Продолжить покупки
         </Link>
       </section>
     );
@@ -155,7 +167,7 @@ export function CheckoutForm({
     <form className={styles.checkoutForm} onSubmit={handleSubmit}>
       <div className={styles.checkoutFields}>
         <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Имя и фамилия</span>
+          <span className={styles.checkoutLabel}>Имя и фамилия</span>
           <input
             className={styles.checkoutInput}
             value={fullName}
@@ -166,7 +178,7 @@ export function CheckoutForm({
         </label>
 
         <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Телефон</span>
+          <span className={styles.checkoutLabel}>Телефон</span>
           <input
             className={styles.checkoutInput}
             value={phone}
@@ -177,7 +189,7 @@ export function CheckoutForm({
         </label>
 
         <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Город</span>
+          <span className={styles.checkoutLabel}>Город</span>
           <input
             className={styles.checkoutInput}
             value={city}
@@ -188,7 +200,7 @@ export function CheckoutForm({
         </label>
 
         <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Адрес</span>
+          <span className={styles.checkoutLabel}>Адрес</span>
           <input
             className={styles.checkoutInput}
             value={addressLine}
@@ -199,7 +211,7 @@ export function CheckoutForm({
         </label>
 
         <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Индекс</span>
+          <span className={styles.checkoutLabel}>Индекс</span>
           <input
             className={styles.checkoutInput}
             value={postalCode}
@@ -209,7 +221,7 @@ export function CheckoutForm({
         </label>
 
         <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Комментарий</span>
+          <span className={styles.checkoutLabel}>Комментарий</span>
           <textarea
             className={styles.checkoutTextarea}
             value={notes}
@@ -220,18 +232,17 @@ export function CheckoutForm({
       </div>
 
       <div className={styles.checkoutTotals}>
-        <p className={styles.checkoutHint}>
-          До скидок: {formatStorePrice(subtotalCents, currency)}
-        </p>
+        <p className={styles.checkoutHint}>До скидок: {formatStorePrice(subtotalCents, currency)}</p>
         {discountCents > 0 && (
-          <p className={styles.checkoutHint}>
-            Скидка: {formatStorePrice(discountCents, currency)}
-          </p>
+          <p className={styles.checkoutHint}>Скидка: {formatStorePrice(discountCents, currency)}</p>
         )}
-        <p className={styles.checkoutHint}>
-          К оплате: {formatStorePrice(totalCents, currency)}
-        </p>
+        <p className={styles.checkoutHint}>К оплате: {paymentSummaryLabel}</p>
       </div>
+
+      <p className={styles.checkoutHint}>
+        После подтверждения будет создан заказ и открыта платёжная сессия. Финальная оплата
+        подтверждается на сервере, а статус заказа обновляется отдельно от витрины и корзины.
+      </p>
 
       {errorMessage && (
         <p
@@ -247,9 +258,9 @@ export function CheckoutForm({
         type="submit"
         className={styles.primaryButton}
         disabled={isPending}
-        aria-label="Оформить заказ"
+        aria-label="Перейти к оплате"
       >
-        {isPending ? 'Оформляем...' : 'Оформить заказ'}
+        {isPending ? 'Запускаем оплату...' : 'Перейти к оплате'}
       </button>
     </form>
   );

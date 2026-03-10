@@ -3,50 +3,43 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getRequestUserContext } from '@/features/auth';
 import { startCheckoutPaymentForProfile, type CheckoutPayload } from '@/features/payments';
 
-function getStatusCode(status: string): number {
-  if (status === 'unauthorized') {
+function getStatusCode(error: string): number {
+  if (error === 'unauthorized') {
     return 401;
   }
-  if (status === 'not_configured') {
+  if (error === 'not_configured') {
     return 503;
   }
-  if (status === 'invalid_input') {
+  if (error === 'invalid_input') {
     return 400;
   }
   if (
-    status === 'empty_cart' ||
-    status === 'unavailable_items' ||
-    status === 'mixed_currency' ||
-    status === 'order_cancelled' ||
-    status === 'already_paid'
+    ['empty_cart', 'unavailable_items', 'mixed_currency', 'order_cancelled', 'already_paid'].includes(
+      error,
+    )
   ) {
     return 409;
   }
+
   return 500;
 }
 
 export async function POST(request: NextRequest) {
   const { profile } = await getRequestUserContext(request);
   if (!profile) {
-    return NextResponse.json(
-      { ok: false, error: 'unauthorized' },
-      { status: 401 },
-    );
+    return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  let payload: CheckoutPayload;
+  let payload: CheckoutPayload & { idempotencyKey?: string | null };
   try {
-    payload = (await request.json()) as CheckoutPayload;
+    payload = (await request.json()) as CheckoutPayload & { idempotencyKey?: string | null };
   } catch {
-    return NextResponse.json(
-      { ok: false, error: 'invalid_request' },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false, error: 'invalid_request' }, { status: 400 });
   }
 
   const result = await startCheckoutPaymentForProfile(profile.id, payload, {
     appOrigin: request.nextUrl.origin,
-    idempotencyKey: (payload as CheckoutPayload & { idempotencyKey?: string | null }).idempotencyKey,
+    idempotencyKey: payload.idempotencyKey,
   });
 
   if (!result.ok) {

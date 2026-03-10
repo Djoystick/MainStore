@@ -2,11 +2,13 @@ import Link from 'next/link';
 import type { CSSProperties } from 'react';
 
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
+import { OrderPaymentAction } from '@/components/store/OrderPaymentAction';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
 import { formatStorePrice } from '@/components/store/formatPrice';
 import { classNames } from '@/css/classnames';
 import { getCurrentUserContext } from '@/features/auth';
+import { formatPaymentProvider, formatPaymentStatus } from '@/features/payments';
 import { getOrderDetailForProfile } from '@/features/orders/data';
 import styles from '@/components/store/store.module.css';
 
@@ -56,6 +58,49 @@ function getOrderStatusClass(status: string): string {
   }
 }
 
+function getPaymentStatusClass(status: string): string {
+  switch (status) {
+    case 'pending':
+      return styles.paymentStatusPending;
+    case 'requires_action':
+      return styles.paymentStatusAction;
+    case 'paid':
+      return styles.paymentStatusPaid;
+    case 'failed':
+      return styles.paymentStatusFailed;
+    case 'cancelled':
+      return styles.paymentStatusCancelled;
+    case 'expired':
+      return styles.paymentStatusExpired;
+    default:
+      return '';
+  }
+}
+
+function mapPaymentQueryNotice(value: string | undefined): { title: string; text: string; isError?: boolean } | null {
+  switch (value) {
+    case 'success':
+      return {
+        title: 'Оплата подтверждена',
+        text: 'Платёж завершён, заказ переведён в подтверждённое состояние.',
+      };
+    case 'cancel':
+      return {
+        title: 'Оплата отменена',
+        text: 'Вы можете вернуться к заказу и запустить оплату повторно.',
+        isError: true,
+      };
+    case 'failed':
+      return {
+        title: 'Оплата не прошла',
+        text: 'Проверьте заказ и попробуйте оплатить его ещё раз.',
+        isError: true,
+      };
+    default:
+      return null;
+  }
+}
+
 function buildImageStyle(imageUrl: string | null): CSSProperties {
   if (imageUrl) {
     return {
@@ -72,16 +117,31 @@ function buildImageStyle(imageUrl: string | null): CSSProperties {
 
 export default async function OrderDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orderId: string }>;
+  searchParams?: Promise<{ payment?: string }>;
 }) {
   const { orderId } = await params;
+  const paymentNotice = mapPaymentQueryNotice((await searchParams)?.payment);
   const { profile } = await getCurrentUserContext();
   const orderData = await getOrderDetailForProfile(profile?.id ?? null, orderId);
   const order = orderData.order;
 
   return (
     <StoreScreen title="Заказ" subtitle="Детали заказа и доставка" back={true}>
+      {paymentNotice && (
+        <section
+          className={classNames(
+            styles.dataNotice,
+            paymentNotice.isError && styles.dataNoticeError,
+          )}
+        >
+          <p className={styles.dataNoticeTitle}>{paymentNotice.title}</p>
+          <p className={styles.dataNoticeText}>{paymentNotice.text}</p>
+        </section>
+      )}
+
       {orderData.message && (
         <section
           className={classNames(
@@ -130,6 +190,9 @@ export default async function OrderDetailPage({
               <h2 className={styles.panelTitle}>
                 Заказ #{order.id.slice(0, 8).toUpperCase()}
               </h2>
+            </div>
+            <p className={styles.panelText}>{formatOrderDate(order.createdAt)}</p>
+            <div className={styles.paymentBadgeRow}>
               <span
                 className={classNames(
                   styles.orderStatusBadge,
@@ -138,8 +201,28 @@ export default async function OrderDetailPage({
               >
                 {formatOrderStatus(order.status)}
               </span>
+              <span
+                className={classNames(
+                  styles.paymentStatusBadge,
+                  getPaymentStatusClass(order.paymentStatus),
+                )}
+              >
+                {formatPaymentStatus(order.paymentStatus)}
+              </span>
             </div>
-            <p className={styles.panelText}>{formatOrderDate(order.createdAt)}</p>
+            <p className={styles.checkoutHint}>
+              Провайдер: {formatPaymentProvider(order.paymentProvider)}
+            </p>
+            {order.paymentCompletedAt && (
+              <p className={styles.checkoutHint}>
+                Оплата подтверждена {formatOrderDate(order.paymentCompletedAt)}
+              </p>
+            )}
+            {order.paymentLastError && (
+              <p className={classNames(styles.inlineActionMessage, styles.inlineActionMessageError)}>
+                {order.paymentLastError}
+              </p>
+            )}
           </section>
 
           <StoreSection title="Сводка">
@@ -166,6 +249,19 @@ export default async function OrderDetailPage({
               </div>
             </div>
           </StoreSection>
+
+          {order.canRetryPayment && (
+            <StoreSection title="Оплата">
+              <OrderPaymentAction
+                orderId={order.id}
+                label={
+                  order.paymentStatus === 'requires_action' || order.paymentStatus === 'pending'
+                    ? 'Продолжить оплату'
+                    : 'Повторить оплату'
+                }
+              />
+            </StoreSection>
+          )}
 
           <StoreSection title="Доставка">
             <div className={styles.orderDetailsGrid}>

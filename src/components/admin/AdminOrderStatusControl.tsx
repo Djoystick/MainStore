@@ -3,7 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { OrderStatus } from '@/features/admin';
+import type { OrderStatus, PaymentStatus } from '@/features/admin';
 
 import styles from './admin.module.css';
 
@@ -47,19 +47,31 @@ function mapAdminOrderStatusError(error: string | undefined): string {
       return 'Выбран некорректный статус заказа.';
     case 'admin_access_denied':
       return 'У вас нет доступа к этому действию.';
+    case 'payment_not_completed':
+      return 'Нельзя перевести заказ в обработку до подтверждённой оплаты.';
     default:
       return 'Не удалось обновить статус заказа. Попробуйте еще раз.';
   }
 }
 
+function isStatusAllowed(status: OrderStatus, paymentStatus: PaymentStatus): boolean {
+  if (paymentStatus === 'paid') {
+    return true;
+  }
+
+  return status === 'pending' || status === 'cancelled';
+}
+
 interface AdminOrderStatusControlProps {
   orderId: string;
   initialStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
 }
 
 export function AdminOrderStatusControl({
   orderId,
   initialStatus,
+  paymentStatus,
 }: AdminOrderStatusControlProps) {
   const router = useRouter();
   const [status, setStatus] = useState<OrderStatus>(initialStatus);
@@ -70,7 +82,12 @@ export function AdminOrderStatusControl({
   const isSubmittingRef = useRef(false);
 
   const handleSave = () => {
-    if (status === savedStatus || isPending || isSubmittingRef.current) {
+    if (
+      status === savedStatus ||
+      isPending ||
+      isSubmittingRef.current ||
+      !isStatusAllowed(status, paymentStatus)
+    ) {
       return;
     }
 
@@ -121,7 +138,11 @@ export function AdminOrderStatusControl({
           aria-label="Статус заказа"
         >
           {statusOptions.map((option) => (
-            <option key={option} value={option}>
+            <option
+              key={option}
+              value={option}
+              disabled={!isStatusAllowed(option, paymentStatus)}
+            >
               {formatOrderStatus(option)}
             </option>
           ))}
@@ -132,11 +153,17 @@ export function AdminOrderStatusControl({
         type="button"
         className={styles.adminPrimaryLink}
         onClick={handleSave}
-        disabled={isPending || status === savedStatus}
+        disabled={isPending || status === savedStatus || !isStatusAllowed(status, paymentStatus)}
         aria-label="Обновить статус заказа"
       >
         {isPending ? 'Обновляем...' : 'Обновить статус'}
       </button>
+
+      {paymentStatus !== 'paid' && (
+        <p className={styles.adminCardSub}>
+          Заказ ещё не оплачен. Доступны только безопасные статусы до подтверждения платежа.
+        </p>
+      )}
 
       {errorMessage && <p className={styles.adminError}>{errorMessage}</p>}
       {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
