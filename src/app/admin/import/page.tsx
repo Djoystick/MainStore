@@ -1,20 +1,20 @@
 import { AdminScreen } from '@/components/admin/AdminScreen';
+import { AdminCatalogImportFlow } from '@/components/admin/AdminCatalogImportFlow';
 import adminStyles from '@/components/admin/admin.module.css';
 import { StoreSection } from '@/components/store/StoreSection';
 
 export default function AdminImportPage() {
   return (
-    <AdminScreen title="Catalog Import" subtitle="Prepared entry point for bulk imports">
-      <StoreSection title="Import module placeholder">
+    <AdminScreen title="Catalog Import" subtitle="Upload Excel, validate rows, and import safely">
+      <StoreSection title="Excel Import">
+        <AdminCatalogImportFlow />
+      </StoreSection>
+      <StoreSection title="Supported formats">
         <section className={adminStyles.adminCard}>
-          <h2 className={adminStyles.adminCardTitle}>Planned file formats</h2>
+          <h2 className={adminStyles.adminCardTitle}>File types</h2>
           <p className={adminStyles.adminCardSub}>XLSX, XLS, XLSM, XLTX</p>
           <p className={adminStyles.adminCardSub}>
-            This screen is reserved for the next roadmap wave with parsing,
-            validation, and bulk updates for products and images.
-          </p>
-          <p className={adminStyles.adminCardSub}>
-            Current release keeps this page as a clean placeholder without fake upload flow.
+            Import works in preview-first mode. Data is written only after explicit confirmation.
           </p>
         </section>
       </StoreSection>

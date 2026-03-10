@@ -290,6 +290,117 @@
   font-weight: 700;
 }
 
+.importStageList {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.importStageItem {
+  margin: 0;
+  border: 1px solid var(--store-border);
+  border-radius: 10px;
+  background: var(--store-surface-muted);
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--store-hint);
+}
+
+.importSection {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--store-border);
+}
+
+.importPreviewTableWrap {
+  margin-top: 10px;
+  border: 1px solid var(--store-border);
+  border-radius: 10px;
+  overflow: auto;
+  background: var(--store-surface);
+}
+
+.importPreviewTable {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.importPreviewTable th,
+.importPreviewTable td {
+  border-bottom: 1px solid var(--store-border);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.25;
+  vertical-align: top;
+}
+
+.importPreviewTable th {
+  font-weight: 700;
+  color: var(--store-hint);
+  background: var(--store-surface-muted);
+}
+
+.importPreviewTable tr:last-child td {
+  border-bottom: 0;
+}
+
+.importMappingGrid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.importFieldHint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  color: var(--store-hint);
+}
+
+.importSummaryGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.importSummaryItem {
+  border: 1px solid var(--store-border);
+  border-radius: 10px;
+  background: var(--store-surface-muted);
+  padding: 8px 10px;
+}
+
+.importSummaryLabel {
+  margin: 0 0 4px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--store-hint);
+}
+
+.importSummaryValue {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.importErrorList {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.importSecondaryAction {
+  color: var(--store-hint);
+}
+
 .adminNavLink:focus-visible,
 .adminActionLink:focus-visible,
 .adminPrimaryLink:focus-visible,
@@ -310,6 +421,12 @@
   }
 
   .adminInlineRow {
+    grid-template-columns: 1fr;
+  }
+
+  .importStageList,
+  .importMappingGrid,
+  .importSummaryGrid {
     grid-template-columns: 1fr;
   }
 
