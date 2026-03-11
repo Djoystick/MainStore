@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useMemo, useRef, useState, useTransition, type FormEventHandler } from 'react';
 import Link from 'next/link';
@@ -39,37 +39,37 @@ function mapCheckoutError(error: string, unauthorizedMessage: string): string {
     case 'unauthorized':
       return unauthorizedMessage;
     case 'full_name_required':
-      return 'РЈРєР°Р¶РёС‚Рµ РёРјСЏ РїРѕР»СѓС‡Р°С‚РµР»СЏ.';
+      return 'Укажите имя получателя.';
     case 'full_name_too_short':
-      return 'РРјСЏ РїРѕР»СѓС‡Р°С‚РµР»СЏ СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРѕРµ.';
+      return 'Имя получателя слишком короткое.';
     case 'phone_required':
-      return 'РЈРєР°Р¶РёС‚Рµ С‚РµР»РµС„РѕРЅ РґР»СЏ СЃРІСЏР·Рё.';
+      return 'Укажите телефон для связи.';
     case 'phone_invalid':
-      return 'РџСЂРѕРІРµСЂСЊС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°.';
+      return 'Проверьте номер телефона.';
     case 'city_required':
-      return 'РЈРєР°Р¶РёС‚Рµ РіРѕСЂРѕРґ РґРѕСЃС‚Р°РІРєРё.';
+      return 'Укажите город доставки.';
     case 'city_too_short':
-      return 'РќР°Р·РІР°РЅРёРµ РіРѕСЂРѕРґР° РІС‹РіР»СЏРґРёС‚ СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРёРј.';
+      return 'Название города выглядит слишком коротким.';
     case 'address_required':
-      return 'РЈРєР°Р¶РёС‚Рµ Р°РґСЂРµСЃ РґРѕСЃС‚Р°РІРєРё.';
+      return 'Укажите адрес доставки.';
     case 'address_too_short':
-      return 'Р”РѕР±Р°РІСЊС‚Рµ Р±РѕР»РµРµ С‚РѕС‡РЅС‹Р№ Р°РґСЂРµСЃ РґРѕСЃС‚Р°РІРєРё.';
+      return 'Добавьте более точный адрес доставки.';
     case 'postal_code_invalid':
-      return 'РџСЂРѕРІРµСЂСЊС‚Рµ РёРЅРґРµРєСЃ.';
+      return 'Проверьте индекс.';
     case 'invalid_input':
-      return 'РџСЂРѕРІРµСЂСЊС‚Рµ РѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ РїРѕР»СЏ РґРѕСЃС‚Р°РІРєРё.';
+      return 'Проверьте обязательные поля доставки.';
     case 'empty_cart':
-      return 'РљРѕСЂР·РёРЅР° РїСѓСЃС‚Р°. Р”РѕР±Р°РІСЊС‚Рµ С‚РѕРІР°СЂС‹ Рё РїРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР°.';
+      return 'Корзина пуста. Добавьте товары и попробуйте снова.';
     case 'unavailable_items':
-      return 'Р§Р°СЃС‚СЊ С‚РѕРІР°СЂРѕРІ Р±РѕР»СЊС€Рµ РЅРµРґРѕСЃС‚СѓРїРЅР°. РџСЂРѕРІРµСЂСЊС‚Рµ РєРѕСЂР·РёРЅСѓ.';
+      return 'Часть товаров больше недоступна. Проверьте корзину.';
     case 'mixed_currency':
-      return 'Р’ РѕРґРЅРѕРј Р·Р°РєР°Р·Рµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РѕРґРЅР° РІР°Р»СЋС‚Р°.';
+      return 'В одном заказе поддерживается только одна валюта.';
     case 'not_configured':
-      return 'РџР»Р°С‚С‘Р¶РЅС‹Р№ СЃР»РѕР№ РІСЂРµРјРµРЅРЅРѕ РЅРµРґРѕСЃС‚СѓРїРµРЅ.';
+      return 'Платежный слой временно недоступен.';
     case 'payment_provider_not_supported':
-      return 'Р’С‹Р±СЂР°РЅРЅС‹Р№ РїР»Р°С‚С‘Р¶РЅС‹Р№ РїСЂРѕРІР°Р№РґРµСЂ РїРѕРєР° РЅРµ РїРѕРґРєР»СЋС‡С‘РЅ.';
+      return 'Выбранный платежный провайдер пока не подключен.';
     default:
-      return 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РїСѓСЃС‚РёС‚СЊ РѕРїР»Р°С‚Сѓ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·.';
+      return 'Не удалось запустить оплату. Попробуйте еще раз.';
   }
 }
 
@@ -89,31 +89,31 @@ function validateFields(input: {
   const phoneDigits = phone.replace(/\D/g, '');
 
   if (!fullName) {
-    errors.fullName = 'РЈРєР°Р¶РёС‚Рµ РёРјСЏ Рё С„Р°РјРёР»РёСЋ РїРѕР»СѓС‡Р°С‚РµР»СЏ.';
+    errors.fullName = 'Укажите имя и фамилию получателя.';
   } else if (fullName.length < 2) {
-    errors.fullName = 'РРјСЏ СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРѕРµ.';
+    errors.fullName = 'Имя слишком короткое.';
   }
 
   if (!phone) {
-    errors.phone = 'РЈРєР°Р¶РёС‚Рµ С‚РµР»РµС„РѕРЅ РґР»СЏ СЃРІСЏР·Рё.';
+    errors.phone = 'Укажите телефон для связи.';
   } else if (phoneDigits.length < 6) {
-    errors.phone = 'РџСЂРѕРІРµСЂСЊС‚Рµ РЅРѕРјРµСЂ С‚РµР»РµС„РѕРЅР°.';
+    errors.phone = 'Проверьте номер телефона.';
   }
 
   if (!city) {
-    errors.city = 'РЈРєР°Р¶РёС‚Рµ РіРѕСЂРѕРґ РґРѕСЃС‚Р°РІРєРё.';
+    errors.city = 'Укажите город доставки.';
   } else if (city.length < 2) {
-    errors.city = 'РќР°Р·РІР°РЅРёРµ РіРѕСЂРѕРґР° СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєРѕРµ.';
+    errors.city = 'Название города слишком короткое.';
   }
 
   if (!addressLine) {
-    errors.addressLine = 'РЈРєР°Р¶РёС‚Рµ Р°РґСЂРµСЃ РґРѕСЃС‚Р°РІРєРё.';
+    errors.addressLine = 'Укажите адрес доставки.';
   } else if (addressLine.length < 6) {
-    errors.addressLine = 'Р”РѕР±Р°РІСЊС‚Рµ РґРѕРј, СѓР»РёС†Сѓ Рё РґСЂСѓРіРёРµ РґРµС‚Р°Р»Рё Р°РґСЂРµСЃР°.';
+    errors.addressLine = 'Добавьте дом, улицу и другие детали адреса.';
   }
 
   if (postalCode && postalCode.length < 3) {
-    errors.postalCode = 'РџСЂРѕРІРµСЂСЊС‚Рµ РёРЅРґРµРєСЃ.';
+    errors.postalCode = 'Проверьте индекс.';
   }
 
   return errors;
@@ -177,7 +177,7 @@ export function CheckoutForm({
 
     setFieldErrors(nextFieldErrors);
     if (Object.keys(nextFieldErrors).length > 0) {
-      setErrorMessage('РџСЂРѕРІРµСЂСЊС‚Рµ РїРѕР»СЏ С„РѕСЂРјС‹ Рё РїРѕРїСЂРѕР±СѓР№С‚Рµ РµС‰С‘ СЂР°Р·.');
+      setErrorMessage('Проверьте поля формы и попробуйте еще раз.');
       return;
     }
 
@@ -238,7 +238,7 @@ export function CheckoutForm({
           return;
         }
       } catch {
-        setErrorMessage('РЎРµС‚РµРІР°СЏ РѕС€РёР±РєР° РїСЂРё Р·Р°РїСѓСЃРєРµ РѕРїР»Р°С‚С‹.');
+        setErrorMessage('Сетевая ошибка при запуске оплаты.');
       } finally {
         isSubmittingRef.current = false;
       }
@@ -248,32 +248,32 @@ export function CheckoutForm({
   if (startedPayment) {
     return (
       <section className={styles.checkoutSuccess}>
-        <h2 className={styles.checkoutSuccessTitle}>Р—Р°РєР°Р· СЃРѕР·РґР°РЅ</h2>
+        <h2 className={styles.checkoutSuccessTitle}>Заказ создан</h2>
         <p className={styles.checkoutSuccessText}>
-          РЎСѓРјРјР° Рє РѕРїР»Р°С‚Рµ: {formatStorePrice(startedPayment.totalCents, startedPayment.currency)}
+          Сумма к оплате: {formatStorePrice(startedPayment.totalCents, startedPayment.currency)}
         </p>
         <div className={styles.checkoutSummaryCard}>
           <div className={styles.checkoutSummaryRow}>
-            <span>Р—Р°РєР°Р·</span>
+            <span>Заказ</span>
             <span>#{startedPayment.orderId.slice(0, 8).toUpperCase()}</span>
           </div>
           <div className={styles.checkoutSummaryRow}>
-            <span>РџР»Р°С‚С‘Р¶РЅР°СЏ РїРѕРїС‹С‚РєР°</span>
+            <span>Платежная попытка</span>
             <span>#{startedPayment.paymentAttemptId.slice(0, 8).toUpperCase()}</span>
           </div>
         </div>
         <p className={styles.checkoutHint}>
-          Р•СЃР»Рё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ РїРµСЂРµС…РѕРґ РЅРµ СЃСЂР°Р±РѕС‚Р°Р», РѕС‚РєСЂРѕР№С‚Рµ СЃР»РµРґСѓСЋС‰РёР№ С€Р°Рі РІСЂСѓС‡РЅСѓСЋ РёР»Рё РїСЂРѕРІРµСЂСЊС‚Рµ СЃС‚Р°С‚СѓСЃ
-          Р·Р°РєР°Р·Р° РїРѕР·Р¶Рµ.
+          Если автоматический переход не сработал, откройте следующий шаг вручную или
+          проверьте статус заказа позже.
         </p>
         <div className={styles.checkoutActionsRow}>
           {startedPayment.checkoutUrl ? (
             <Link href={startedPayment.checkoutUrl} className={styles.primaryLinkButton}>
-              РџРµСЂРµР№С‚Рё Рє РѕРїР»Р°С‚Рµ
+              Перейти к оплате
             </Link>
           ) : null}
           <Link href={`/orders/${startedPayment.orderId}`} className={styles.secondaryButton}>
-            РћС‚РєСЂС‹С‚СЊ Р·Р°РєР°Р·
+            Открыть заказ
           </Link>
         </div>
       </section>
@@ -283,10 +283,10 @@ export function CheckoutForm({
   return (
     <form className={styles.checkoutForm} onSubmit={handleSubmit}>
       <section className={styles.checkoutSection}>
-        <h3 className={styles.checkoutSectionTitle}>РџРѕР»СѓС‡Р°С‚РµР»СЊ</h3>
+        <h3 className={styles.checkoutSectionTitle}>Получатель</h3>
         <div className={styles.checkoutFields}>
           <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>РРјСЏ Рё С„Р°РјРёР»РёСЏ</span>
+            <span className={styles.checkoutLabel}>Имя и фамилия</span>
             <input
               className={classNames(styles.checkoutInput, fieldErrors.fullName && styles.checkoutInputError)}
               value={fullName}
@@ -295,7 +295,7 @@ export function CheckoutForm({
                 clearFieldError('fullName');
               }}
               autoComplete="name"
-              placeholder="РљР°Рє Рє РІР°Рј РѕР±СЂР°С‰Р°С‚СЊСЃСЏ"
+              placeholder="Как к вам обращаться"
               maxLength={120}
               required
             />
@@ -303,7 +303,7 @@ export function CheckoutForm({
           </label>
 
           <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>РўРµР»РµС„РѕРЅ</span>
+            <span className={styles.checkoutLabel}>Телефон</span>
             <input
               className={classNames(styles.checkoutInput, fieldErrors.phone && styles.checkoutInputError)}
               value={phone}
@@ -323,10 +323,10 @@ export function CheckoutForm({
       </section>
 
       <section className={styles.checkoutSection}>
-        <h3 className={styles.checkoutSectionTitle}>Р”РѕСЃС‚Р°РІРєР°</h3>
+        <h3 className={styles.checkoutSectionTitle}>Доставка</h3>
         <div className={styles.checkoutFields}>
           <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>Р“РѕСЂРѕРґ</span>
+            <span className={styles.checkoutLabel}>Город</span>
             <input
               className={classNames(styles.checkoutInput, fieldErrors.city && styles.checkoutInputError)}
               value={city}
@@ -335,7 +335,7 @@ export function CheckoutForm({
                 clearFieldError('city');
               }}
               autoComplete="address-level2"
-              placeholder="РњРѕСЃРєРІР°"
+              placeholder="Москва"
               maxLength={120}
               required
             />
@@ -343,7 +343,7 @@ export function CheckoutForm({
           </label>
 
           <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>РђРґСЂРµСЃ</span>
+            <span className={styles.checkoutLabel}>Адрес</span>
             <input
               className={classNames(styles.checkoutInput, fieldErrors.addressLine && styles.checkoutInputError)}
               value={addressLine}
@@ -352,19 +352,21 @@ export function CheckoutForm({
                 clearFieldError('addressLine');
               }}
               autoComplete="street-address"
-              placeholder="РЈР»РёС†Р°, РґРѕРј, РєРІР°СЂС‚РёСЂР°, РїРѕРґСЉРµР·Рґ"
+              placeholder="Улица, дом, квартира, подъезд"
               maxLength={240}
               required
             />
             {fieldErrors.addressLine ? (
               <span className={styles.checkoutFieldError}>{fieldErrors.addressLine}</span>
             ) : (
-              <span className={styles.checkoutFieldHint}>Р”РѕР±Р°РІСЊС‚Рµ РґРµС‚Р°Р»Рё, С‡С‚РѕР±С‹ РґРѕСЃС‚Р°РІРєР° Р±С‹Р»Р° Р±РµР· СѓС‚РѕС‡РЅРµРЅРёР№.</span>
+              <span className={styles.checkoutFieldHint}>
+                Добавьте детали, чтобы доставка была без уточнений.
+              </span>
             )}
           </label>
 
           <label className={styles.checkoutField}>
-            <span className={styles.checkoutLabel}>РРЅРґРµРєСЃ</span>
+            <span className={styles.checkoutLabel}>Индекс</span>
             <input
               className={classNames(styles.checkoutInput, fieldErrors.postalCode && styles.checkoutInputError)}
               value={postalCode}
@@ -374,54 +376,58 @@ export function CheckoutForm({
               }}
               autoComplete="postal-code"
               inputMode="numeric"
-              placeholder="РќРµРѕР±СЏР·Р°С‚РµР»СЊРЅРѕ"
+              placeholder="Необязательно"
               maxLength={40}
             />
             {fieldErrors.postalCode ? (
               <span className={styles.checkoutFieldError}>{fieldErrors.postalCode}</span>
             ) : (
-              <span className={styles.checkoutFieldHint}>РњРѕР¶РЅРѕ РѕСЃС‚Р°РІРёС‚СЊ РїСѓСЃС‚С‹Рј, РµСЃР»Рё РёРЅРґРµРєСЃ РЅРµ РЅСѓР¶РµРЅ.</span>
+              <span className={styles.checkoutFieldHint}>
+                Можно оставить пустым, если индекс не нужен.
+              </span>
             )}
           </label>
         </div>
       </section>
 
       <section className={styles.checkoutSection}>
-        <h3 className={styles.checkoutSectionTitle}>РљРѕРјРјРµРЅС‚Р°СЂРёР№ Рє Р·Р°РєР°Р·Сѓ</h3>
+        <h3 className={styles.checkoutSectionTitle}>Комментарий к заказу</h3>
         <label className={styles.checkoutField}>
-          <span className={styles.checkoutLabel}>РџРѕР¶РµР»Р°РЅРёСЏ</span>
+          <span className={styles.checkoutLabel}>Пожелания</span>
           <textarea
             className={styles.checkoutTextarea}
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             rows={3}
-            placeholder="РќР°РїСЂРёРјРµСЂ: РїРѕР·РІРѕРЅРёС‚СЊ РїРµСЂРµРґ РґРѕСЃС‚Р°РІРєРѕР№"
+            placeholder="Например: позвонить перед доставкой"
             maxLength={500}
           />
-          <span className={styles.checkoutFieldHint}>РќРµРѕР±СЏР·Р°С‚РµР»СЊРЅРѕ. РљРѕРјРјРµРЅС‚Р°СЂРёР№ СЃРѕС…СЂР°РЅРёС‚СЃСЏ РІ Р·Р°РєР°Р·Рµ.</span>
+          <span className={styles.checkoutFieldHint}>
+            Необязательно. Комментарий сохранится в заказе.
+          </span>
         </label>
       </section>
 
       <div className={styles.checkoutSummaryCard}>
         <div className={styles.checkoutSummaryRow}>
-          <span>Р”Рѕ СЃРєРёРґРѕРє</span>
+          <span>До скидок</span>
           <span>{formatStorePrice(subtotalCents, currency)}</span>
         </div>
         {discountCents > 0 ? (
           <div className={styles.checkoutSummaryRow}>
-            <span>РЎРєРёРґРєР°</span>
+            <span>Скидка</span>
             <span>{formatStorePrice(discountCents, currency)}</span>
           </div>
         ) : null}
         <div className={styles.checkoutSummaryRow}>
-          <span>Рљ РѕРїР»Р°С‚Рµ</span>
+          <span>К оплате</span>
           <strong>{paymentSummaryLabel}</strong>
         </div>
       </div>
 
       <p className={styles.checkoutHint}>
-        РџРѕСЃР»Рµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ СЃРѕР·РґР°С‘С‚СЃСЏ Р·Р°РєР°Р· Рё РѕС‚РєСЂС‹РІР°РµС‚СЃСЏ РїР»Р°С‚С‘Р¶РЅР°СЏ СЃРµСЃСЃРёСЏ. Р¤РёРЅР°Р»СЊРЅР°СЏ С†РµРЅР° Рё СЃРєРёРґРєРё
-        РїРѕРґС‚РІРµСЂР¶РґР°СЋС‚СЃСЏ РЅР° СЃРµСЂРІРµСЂРµ.
+        После подтверждения создается заказ и открывается платежная сессия. Финальная цена и
+        скидки подтверждаются на сервере.
       </p>
 
       {errorMessage ? (
@@ -434,10 +440,14 @@ export function CheckoutForm({
         </p>
       ) : null}
 
-      <button type="submit" className={styles.primaryButton} disabled={isPending} aria-label="РЎРѕР·РґР°С‚СЊ Р·Р°РєР°Р· Рё РїРµСЂРµР№С‚Рё Рє РѕРїР»Р°С‚Рµ">
-        {isPending ? 'Р—Р°РїСѓСЃРєР°РµРј РѕРїР»Р°С‚Сѓ...' : 'РЎРѕР·РґР°С‚СЊ Р·Р°РєР°Р· Рё РїРµСЂРµР№С‚Рё Рє РѕРїР»Р°С‚Рµ'}
+      <button
+        type="submit"
+        className={styles.primaryButton}
+        disabled={isPending}
+        aria-label="Создать заказ и перейти к оплате"
+      >
+        {isPending ? 'Запускаем оплату...' : 'Создать заказ и перейти к оплате'}
       </button>
     </form>
   );
 }
-

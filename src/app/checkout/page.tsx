@@ -41,7 +41,11 @@ export default async function CheckoutPage() {
   const discountLabel = formatStorePrice(cartData.discountTotalCents, currency);
 
   return (
-    <StoreScreen title="Оформление" subtitle="Доставка, сумма и понятный путь к оплате" back={true}>
+    <StoreScreen
+      title="Оформление"
+      subtitle="Доставка, сумма и понятный путь к оплате"
+      back={true}
+    >
       {cartData.message ? (
         <section
           className={classNames(
@@ -53,7 +57,11 @@ export default async function CheckoutPage() {
           <p className={styles.dataNoticeText}>{cartData.message}</p>
           {(cartData.status === 'error' || cartData.status === 'not_configured') && (
             <div className={styles.dataNoticeActions}>
-              <Link href="/checkout" className={styles.dataNoticeRetry} aria-label="Повторить загрузку оформления">
+              <Link
+                href="/checkout"
+                className={styles.dataNoticeRetry}
+                aria-label="Повторить загрузку оформления"
+              >
                 Повторить
               </Link>
             </div>
@@ -116,7 +124,7 @@ export default async function CheckoutPage() {
             </div>
           </StoreSection>
 
-          <StoreSection title="Что войдёт в заказ">
+          <StoreSection title="Что войдет в заказ">
             <div className={styles.orderItemsList}>
               {cartData.items.map((item) => (
                 <article key={item.id} className={styles.orderItemRow}>
@@ -139,11 +147,11 @@ export default async function CheckoutPage() {
           </StoreSection>
 
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Как пройдёт оформление</h2>
+            <h2 className={styles.panelTitle}>Как пройдет оформление</h2>
             <p className={styles.panelText}>
-              Сначала вы подтверждаете данные доставки, затем создаётся заказ и открывается тестовый
-              платёжный шаг. Статус оплаты и статус заказа сохраняются отдельно и дальше отображаются
-              в заказе.
+              Сначала вы подтверждаете данные доставки, затем создается заказ и открывается
+              тестовый платежный шаг. Статус оплаты и статус заказа сохраняются отдельно и
+              дальше отображаются в заказе.
             </p>
           </section>
 
@@ -157,7 +165,11 @@ export default async function CheckoutPage() {
             />
           </StoreSection>
 
-          <Link href="/cart" className={styles.secondaryInlineLink} aria-label="Вернуться в корзину">
+          <Link
+            href="/cart"
+            className={styles.secondaryInlineLink}
+            aria-label="Вернуться в корзину"
+          >
             Вернуться в корзину
           </Link>
         </>
