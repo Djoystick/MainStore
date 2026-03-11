@@ -137,6 +137,12 @@ function mapCategories(rows: CategoryRow[]): AdminCategoryOption[] {
         isActive: row.is_active,
         sortOrder: metadata.displayOrder,
         productsCount: 0,
+        catalogGroupSlug: metadata.catalogGroupSlug,
+        catalogGroupTitle: metadata.catalogGroupTitle,
+        catalogGroupDescription: metadata.catalogGroupDescription,
+        catalogGroupOrder: metadata.catalogGroupOrder,
+        catalogVisible: metadata.catalogVisible,
+        catalogVisual: metadata.catalogVisual,
       };
     });
 }

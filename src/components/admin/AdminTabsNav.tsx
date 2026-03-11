@@ -11,7 +11,7 @@ const tabs = [
   { href: '/admin', label: 'Главная' },
   { href: '/admin/products', label: 'Товары' },
   { href: '/admin/discounts', label: 'Скидки' },
-  { href: '/admin/categories', label: 'Категории' },
+  { href: '/admin/categories', label: 'Каталог' },
   { href: '/admin/collections', label: 'Подборки' },
   { href: '/admin/orders', label: 'Заказы' },
   { href: '/admin/import', label: 'Импорт' },

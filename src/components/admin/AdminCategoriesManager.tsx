@@ -12,24 +12,38 @@ interface AdminCategoriesManagerProps {
   categories: AdminCategoryOption[];
 }
 
-interface CategoryRowProps {
-  category: AdminCategoryOption;
+interface CategoryEditorProps {
+  category?: AdminCategoryOption;
+  submitLabel: string;
+  successLabel: string;
+  resetOnSuccess?: boolean;
+  onSubmit: (payload: CategoryUpsertInput) => Promise<{ ok: true } | { ok: false; error?: string }>;
+}
+
+interface CatalogSectionSummary {
+  slug: string;
+  title: string;
+  description: string;
+  order: number;
+  visual: string | null;
+  categoriesCount: number;
+}
+
+interface CategoryDeleteButtonProps {
+  categoryId: string;
+  onDeleted: () => void;
 }
 
 function slugify(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function normalizeOptionalText(value: string): string | null {
+  const normalized = value.trim();
+  return normalized ? normalized : null;
 }
 
 function mapAdminCategoryError(error: string | undefined): string {
-  if (!error) {
-    return 'Не удалось обновить категорию.';
-  }
-
   switch (error) {
     case 'not_configured':
       return 'Админ-часть временно недоступна.';
@@ -39,12 +53,14 @@ function mapAdminCategoryError(error: string | undefined): string {
       return 'Слаг категории должен содержать только строчные буквы, цифры и дефисы.';
     case 'invalid_category_sort_order':
       return 'Порядок вывода должен быть неотрицательным целым числом.';
+    case 'invalid_catalog_group_slug':
+      return 'Код верхнего раздела должен содержать только строчные буквы, цифры и дефисы.';
+    case 'invalid_catalog_group_order':
+      return 'Порядок верхнего раздела должен быть неотрицательным целым числом.';
     case 'slug_conflict':
       return 'Этот слаг уже используется другой категорией.';
     case 'category_not_found':
       return 'Эта категория больше недоступна.';
-    case 'invalid_category_payload':
-      return 'Заполните обязательные поля категории.';
     case 'admin_access_denied':
       return 'У вас нет доступа к этому действию.';
     default:
@@ -52,156 +68,205 @@ function mapAdminCategoryError(error: string | undefined): string {
   }
 }
 
-function CategoryRow({ category }: CategoryRowProps) {
-  const router = useRouter();
+function buildCatalogSections(categories: AdminCategoryOption[]): CatalogSectionSummary[] {
+  const sections = new Map<string, CatalogSectionSummary>();
+
+  categories.forEach((category) => {
+    if (!category.isActive || !category.catalogVisible) {
+      return;
+    }
+
+    const slug = category.catalogGroupSlug?.trim() || category.slug;
+    const title = category.catalogGroupTitle?.trim() || category.title;
+    const description =
+      category.catalogGroupDescription?.trim() ||
+      category.shortText?.trim() ||
+      category.description?.trim() ||
+      'Подкатегории этого раздела';
+    const order = category.catalogGroupOrder ?? category.sortOrder;
+    const visual = category.catalogVisual?.trim() || null;
+
+    const current = sections.get(slug);
+    if (!current) {
+      sections.set(slug, { slug, title, description, order, visual, categoriesCount: 1 });
+      return;
+    }
+
+    current.categoriesCount += 1;
+    if (order < current.order) {
+      current.title = title;
+      current.description = description;
+      current.order = order;
+      current.visual = visual;
+    } else if (!current.visual && visual) {
+      current.visual = visual;
+    }
+  });
+
+  return [...sections.values()].sort((left, right) => {
+    if (left.order !== right.order) {
+      return left.order - right.order;
+    }
+    return left.title.localeCompare(right.title);
+  });
+}
+
+function CategoryDeleteButton({ categoryId, onDeleted }: CategoryDeleteButtonProps) {
   const [isPending, startTransition] = useTransition();
-  const [title, setTitle] = useState(category.title);
-  const [slug, setSlug] = useState(category.slug);
-  const [description, setDescription] = useState(category.description ?? '');
-  const [shortText, setShortText] = useState(category.shortText ?? '');
-  const [sortOrder, setSortOrder] = useState(String(category.sortOrder));
-  const [isActive, setIsActive] = useState(category.isActive);
-  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  return (
+    <div className={styles.adminActions}>
+      <button
+        type="button"
+        className={styles.adminDangerButton}
+        disabled={isPending}
+        onClick={() => {
+          if (!isConfirming) {
+            setIsConfirming(true);
+            return;
+          }
+
+          startTransition(async () => {
+            setErrorMessage(null);
+
+            try {
+              const response = await fetch(`/api/admin/categories/${categoryId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+              });
+              const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+              if (!response.ok || !data?.ok) {
+                setErrorMessage(mapAdminCategoryError(data?.error));
+                return;
+              }
+
+              onDeleted();
+            } catch {
+              setErrorMessage('Сетевая ошибка при удалении категории.');
+            }
+          });
+        }}
+      >
+        {isPending ? 'Удаляем...' : isConfirming ? 'Подтвердить удаление' : 'Удалить категорию'}
+      </button>
+      {errorMessage ? <p className={styles.adminError}>{errorMessage}</p> : null}
+    </div>
+  );
+}
+
+function CategoryEditor({
+  category,
+  submitLabel,
+  successLabel,
+  resetOnSuccess = false,
+  onSubmit,
+}: CategoryEditorProps) {
+  const [isPending, startTransition] = useTransition();
+  const [title, setTitle] = useState(category?.title ?? '');
+  const [slug, setSlug] = useState(category?.slug ?? '');
+  const [description, setDescription] = useState(category?.description ?? '');
+  const [shortText, setShortText] = useState(category?.shortText ?? '');
+  const [sortOrder, setSortOrder] = useState(String(category?.sortOrder ?? 0));
+  const [isActive, setIsActive] = useState(category?.isActive ?? true);
+  const [catalogGroupSlug, setCatalogGroupSlug] = useState(category?.catalogGroupSlug ?? '');
+  const [catalogGroupTitle, setCatalogGroupTitle] = useState(category?.catalogGroupTitle ?? '');
+  const [catalogGroupDescription, setCatalogGroupDescription] = useState(
+    category?.catalogGroupDescription ?? '',
+  );
+  const [catalogGroupOrder, setCatalogGroupOrder] = useState(String(category?.catalogGroupOrder ?? 0));
+  const [catalogVisible, setCatalogVisible] = useState(category?.catalogVisible ?? true);
+  const [catalogVisual, setCatalogVisual] = useState(category?.catalogVisual ?? '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const isSubmittingRef = useRef(false);
 
-  const onSave = () => {
+  const handleSubmit: FormEventHandler<HTMLFormElement> = (event) => {
+    event.preventDefault();
     if (isPending || isSubmittingRef.current) {
       return;
     }
 
-    isSubmittingRef.current = true;
+    const parsedSortOrder = Number(sortOrder);
+    const parsedCatalogGroupOrder = Number(catalogGroupOrder);
 
+    if (!Number.isInteger(parsedSortOrder) || parsedSortOrder < 0) {
+      setErrorMessage('Порядок вывода должен быть неотрицательным целым числом.');
+      return;
+    }
+
+    if (!Number.isInteger(parsedCatalogGroupOrder) || parsedCatalogGroupOrder < 0) {
+      setErrorMessage('Порядок верхнего раздела должен быть неотрицательным целым числом.');
+      return;
+    }
+
+    const payload: CategoryUpsertInput = {
+      title,
+      slug,
+      description,
+      shortText,
+      isActive,
+      sortOrder: parsedSortOrder,
+      catalogGroupSlug: normalizeOptionalText(catalogGroupSlug),
+      catalogGroupTitle: normalizeOptionalText(catalogGroupTitle),
+      catalogGroupDescription: normalizeOptionalText(catalogGroupDescription),
+      catalogGroupOrder: parsedCatalogGroupOrder,
+      catalogVisible,
+      catalogVisual: normalizeOptionalText(catalogVisual),
+    };
+
+    isSubmittingRef.current = true;
     startTransition(async () => {
       setErrorMessage(null);
       setSuccessMessage(null);
 
-      const parsedSortOrder = Number(sortOrder);
-      if (!Number.isInteger(parsedSortOrder) || parsedSortOrder < 0) {
-        setErrorMessage('Порядок вывода должен быть неотрицательным целым числом.');
-        isSubmittingRef.current = false;
-        return;
-      }
-
-      const payload: CategoryUpsertInput = {
-        title,
-        slug,
-        description,
-        shortText,
-        isActive,
-        sortOrder: parsedSortOrder,
-      };
-
-      try {
-        const response = await fetch(`/api/admin/categories/${category.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-
-        const data = (await response.json().catch(() => null)) as
-          | { ok: true }
-          | { ok: false; error?: string }
-          | null;
-
-        if (!response.ok || !data || !data.ok) {
-          const errorCode = data && !data.ok ? data.error : undefined;
-          setErrorMessage(mapAdminCategoryError(errorCode));
-          return;
+      const result = await onSubmit(payload);
+      if (!result.ok) {
+        setErrorMessage(mapAdminCategoryError(result.error));
+      } else {
+        setSuccessMessage(successLabel);
+        if (resetOnSuccess) {
+          setTitle('');
+          setSlug('');
+          setDescription('');
+          setShortText('');
+          setSortOrder('0');
+          setIsActive(true);
+          setCatalogGroupSlug('');
+          setCatalogGroupTitle('');
+          setCatalogGroupDescription('');
+          setCatalogGroupOrder('0');
+          setCatalogVisible(true);
+          setCatalogVisual('');
         }
-
-        setSuccessMessage('Категория сохранена.');
-        setIsConfirmingDelete(false);
-        router.refresh();
-      } catch {
-        setErrorMessage('Сетевая ошибка при сохранении категории.');
-      } finally {
-        isSubmittingRef.current = false;
       }
-    });
-  };
 
-  const onDelete = () => {
-    if (isPending || isSubmittingRef.current) {
-      return;
-    }
-
-    if (!isConfirmingDelete) {
-      setIsConfirmingDelete(true);
-      return;
-    }
-
-    isSubmittingRef.current = true;
-
-    startTransition(async () => {
-      setErrorMessage(null);
-      setSuccessMessage(null);
-
-      try {
-        const response = await fetch(`/api/admin/categories/${category.id}`, {
-          method: 'DELETE',
-          credentials: 'include',
-        });
-
-        const data = (await response.json().catch(() => null)) as
-          | { ok: true; summary?: { detachedProductsCount: number } }
-          | { ok: false; error?: string }
-          | null;
-
-        if (!response.ok || !data || !data.ok) {
-          const errorCode = data && !data.ok ? data.error : undefined;
-          setErrorMessage(mapAdminCategoryError(errorCode));
-          return;
-        }
-
-        router.refresh();
-      } catch {
-        setErrorMessage('Сетевая ошибка при удалении категории.');
-      } finally {
-        isSubmittingRef.current = false;
-      }
+      isSubmittingRef.current = false;
     });
   };
 
   return (
-    <article className={styles.adminCard}>
-      <div className={styles.adminCardHead}>
-        <div>
-          <h3 className={styles.adminCardTitle}>{category.title}</h3>
-          <p className={styles.adminCardSub}>
-            {category.productsCount} связанных товаров · {category.slug}
-          </p>
+    <form className={styles.adminForm} onSubmit={handleSubmit} aria-busy={isPending}>
+      <section className={styles.adminFormSection}>
+        <div className={styles.adminFormSectionHead}>
+          <h4 className={styles.adminFormSectionTitle}>Основные данные</h4>
+          <p className={styles.adminFormSectionText}>Поля самой категории и её карточки в витрине.</p>
         </div>
-        <div className={styles.adminBadgeRow}>
-          <span className={styles.adminStatusBadge}>{isActive ? 'Видна' : 'Скрыта'}</span>
-        </div>
-      </div>
 
-      <div className={styles.adminForm}>
         <div className={styles.adminInlineRow}>
           <label className={styles.adminField}>
             <span className={styles.adminLabel}>Название</span>
-            <input className={styles.adminInput} value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input className={styles.adminInput} value={title} onChange={(event) => setTitle(event.target.value)} required />
           </label>
-
           <label className={styles.adminField}>
             <span className={styles.adminLabel}>Слаг</span>
             <div className={styles.adminInlineActionRow}>
-              <input className={styles.adminInput} value={slug} onChange={(event) => setSlug(event.target.value)} />
-              <button
-                type="button"
-                className={styles.adminActionButton}
-                onClick={() => setSlug(slugify(title))}
-                disabled={!title.trim() || isPending}
-              >
+              <input className={styles.adminInput} value={slug} onChange={(event) => setSlug(event.target.value)} required />
+              <button type="button" className={styles.adminActionButton} onClick={() => setSlug(slugify(title))} disabled={!title.trim() || isPending}>
                 Из названия
               </button>
             </div>
-            <span className={styles.adminFieldHint}>
-              Используйте строчные латинские буквы, цифры и дефисы.
-            </span>
           </label>
         </div>
 
@@ -209,84 +274,83 @@ function CategoryRow({ category }: CategoryRowProps) {
           <label className={styles.adminField}>
             <span className={styles.adminLabel}>Короткий текст</span>
             <input className={styles.adminInput} value={shortText} onChange={(event) => setShortText(event.target.value)} />
-            <span className={styles.adminFieldHint}>
-              Короткая подпись для витрины и переходов в каталог.
-            </span>
           </label>
-
           <label className={styles.adminField}>
             <span className={styles.adminLabel}>Порядок вывода</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              className={styles.adminInput}
-              value={sortOrder}
-              onChange={(event) => setSortOrder(event.target.value)}
-            />
-            <span className={styles.adminFieldHint}>Чем меньше число, тем выше категория в списке.</span>
+            <input type="number" min="0" step="1" className={styles.adminInput} value={sortOrder} onChange={(event) => setSortOrder(event.target.value)} />
           </label>
         </div>
 
         <label className={styles.adminField}>
           <span className={styles.adminLabel}>Описание</span>
-          <textarea
-            className={styles.adminTextarea}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            rows={3}
-          />
+          <textarea className={styles.adminTextarea} value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
+        </label>
+      </section>
+
+      <section className={styles.adminFormSection}>
+        <div className={styles.adminFormSectionHead}>
+          <h4 className={styles.adminFormSectionTitle}>Каталог и плитка раздела</h4>
+          <p className={styles.adminFormSectionText}>Эти поля управляют верхним уровнем каталога и переходом к листингу.</p>
+        </div>
+
+        <div className={styles.adminInlineRow}>
+          <label className={styles.adminField}>
+            <span className={styles.adminLabel}>Код верхнего раздела</span>
+            <div className={styles.adminInlineActionRow}>
+              <input className={styles.adminInput} value={catalogGroupSlug} onChange={(event) => setCatalogGroupSlug(event.target.value)} placeholder="apparel" />
+              <button type="button" className={styles.adminActionButton} onClick={() => setCatalogGroupSlug(slugify(catalogGroupTitle || title))} disabled={!(catalogGroupTitle.trim() || title.trim()) || isPending}>
+                Из названия
+              </button>
+            </div>
+            <span className={styles.adminFieldHint}>Одинаковый код объединяет подкатегории в одну верхнюю плитку.</span>
+          </label>
+          <label className={styles.adminField}>
+            <span className={styles.adminLabel}>Порядок верхнего раздела</span>
+            <input type="number" min="0" step="1" className={styles.adminInput} value={catalogGroupOrder} onChange={(event) => setCatalogGroupOrder(event.target.value)} />
+          </label>
+        </div>
+
+        <div className={styles.adminInlineRow}>
+          <label className={styles.adminField}>
+            <span className={styles.adminLabel}>Заголовок верхней плитки</span>
+            <input className={styles.adminInput} value={catalogGroupTitle} onChange={(event) => setCatalogGroupTitle(event.target.value)} placeholder="Одежда" />
+          </label>
+          <label className={styles.adminField}>
+            <span className={styles.adminLabel}>Визуал плитки</span>
+            <input className={styles.adminInput} value={catalogVisual} onChange={(event) => setCatalogVisual(event.target.value)} placeholder="ОД или emoji" />
+          </label>
+        </div>
+
+        <label className={styles.adminField}>
+          <span className={styles.adminLabel}>Описание верхней плитки</span>
+          <textarea className={styles.adminTextarea} value={catalogGroupDescription} onChange={(event) => setCatalogGroupDescription(event.target.value)} rows={2} />
         </label>
 
         <label className={styles.adminCheckboxRow}>
-          <input
-            type="checkbox"
-            className={styles.adminCheckbox}
-            checked={isActive}
-            onChange={(event) => setIsActive(event.target.checked)}
-          />
-          <span className={styles.adminLabel}>Показывать на витрине</span>
+          <input type="checkbox" className={styles.adminCheckbox} checked={catalogVisible} onChange={(event) => setCatalogVisible(event.target.checked)} />
+          <span className={styles.adminLabel}>Показывать категорию в каталоге</span>
         </label>
+        <label className={styles.adminCheckboxRow}>
+          <input type="checkbox" className={styles.adminCheckbox} checked={isActive} onChange={(event) => setIsActive(event.target.checked)} />
+          <span className={styles.adminLabel}>Категория активна</span>
+        </label>
+      </section>
 
-        {isConfirmingDelete && (
-          <div className={styles.adminCalloutWarn}>
-            <p className={styles.adminCalloutTitle}>Подтверждение удаления</p>
-            <p className={styles.adminCalloutText}>
-              Категория удалится, а связанные товары останутся в каталоге без привязки к разделу.
-            </p>
-          </div>
-        )}
+      <button type="submit" className={category ? styles.adminActionButton : styles.adminPrimaryButton} disabled={isPending}>
+        {isPending ? 'Сохраняем...' : submitLabel}
+      </button>
 
-        <div className={styles.adminActions}>
-          <button type="button" className={styles.adminActionButton} onClick={onSave} disabled={isPending}>
-            {isPending ? 'Сохраняем...' : 'Сохранить категорию'}
-          </button>
-          <button type="button" className={styles.adminDangerButton} onClick={onDelete} disabled={isPending}>
-            {isConfirmingDelete ? 'Подтвердить удаление' : 'Удалить категорию'}
-          </button>
-        </div>
-
-        {errorMessage && <p className={styles.adminError}>{errorMessage}</p>}
-        {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
-      </div>
-    </article>
+      {errorMessage && <p className={styles.adminError}>{errorMessage}</p>}
+      {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
+    </form>
   );
 }
 
 export function AdminCategoriesManager({ categories }: AdminCategoriesManagerProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState('');
   const [visibilityFilter, setVisibilityFilter] = useState<'all' | 'visible' | 'hidden'>('all');
-  const [title, setTitle] = useState('');
-  const [slug, setSlug] = useState('');
-  const [description, setDescription] = useState('');
-  const [shortText, setShortText] = useState('');
-  const [sortOrder, setSortOrder] = useState('0');
-  const [isActive, setIsActive] = useState(true);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const isSubmittingRef = useRef(false);
+  const [catalogFilter, setCatalogFilter] = useState<'all' | 'catalog' | 'hidden'>('all');
 
   const filteredCategories = categories.filter((category) => {
     if (visibilityFilter === 'visible' && !category.isActive) {
@@ -295,270 +359,202 @@ export function AdminCategoriesManager({ categories }: AdminCategoriesManagerPro
     if (visibilityFilter === 'hidden' && category.isActive) {
       return false;
     }
-
+    if (catalogFilter === 'catalog' && !category.catalogVisible) {
+      return false;
+    }
+    if (catalogFilter === 'hidden' && category.catalogVisible) {
+      return false;
+    }
     if (!search.trim()) {
       return true;
     }
 
-    const haystack = `${category.title} ${category.slug} ${category.shortText ?? ''}`.toLowerCase();
+    const haystack = [category.title, category.slug, category.shortText ?? '', category.catalogGroupSlug ?? '', category.catalogGroupTitle ?? ''].join(' ').toLowerCase();
     return haystack.includes(search.trim().toLowerCase());
   });
 
-  const visibleCount = categories.filter((category) => category.isActive).length;
-  const hiddenCount = categories.length - visibleCount;
+  const catalogSections = buildCatalogSections(categories);
   const linkedProductsCount = categories.reduce((total, category) => total + category.productsCount, 0);
-
-  const onCreate: FormEventHandler<HTMLFormElement> = (event) => {
-    event.preventDefault();
-    if (isPending || isSubmittingRef.current) {
-      return;
-    }
-
-    isSubmittingRef.current = true;
-
-    startTransition(async () => {
-      setErrorMessage(null);
-      setSuccessMessage(null);
-
-      const parsedSortOrder = Number(sortOrder);
-      if (!Number.isInteger(parsedSortOrder) || parsedSortOrder < 0) {
-        setErrorMessage('Порядок вывода должен быть неотрицательным целым числом.');
-        isSubmittingRef.current = false;
-        return;
-      }
-
-      const payload: CategoryUpsertInput = {
-        title,
-        slug,
-        description,
-        shortText,
-        isActive,
-        sortOrder: parsedSortOrder,
-      };
-
-      try {
-        const response = await fetch('/api/admin/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload),
-        });
-
-        const data = (await response.json().catch(() => null)) as
-          | { ok: true; id?: string }
-          | { ok: false; error?: string }
-          | null;
-
-        if (!response.ok || !data || !data.ok) {
-          const errorCode = data && !data.ok ? data.error : undefined;
-          setErrorMessage(mapAdminCategoryError(errorCode));
-          return;
-        }
-
-        setTitle('');
-        setSlug('');
-        setDescription('');
-        setShortText('');
-        setSortOrder('0');
-        setIsActive(true);
-        setSuccessMessage('Категория создана.');
-        router.refresh();
-      } catch {
-        setErrorMessage('Сетевая ошибка при создании категории.');
-      } finally {
-        isSubmittingRef.current = false;
-      }
-    });
-  };
+  const catalogVisibleCount = categories.filter((category) => category.isActive && category.catalogVisible).length;
 
   return (
     <section className={styles.adminSectionStack}>
       <section className={styles.adminCard}>
         <div className={styles.adminCardHead}>
           <div>
-            <h2 className={styles.adminCardTitle}>Категории</h2>
-            <p className={styles.adminCardSub}>
-              Управляйте навигацией витрины, короткими текстами и порядком вывода без лишних
-              переходов.
-            </p>
+            <h2 className={styles.adminCardTitle}>Каталог и структура витрины</h2>
+            <p className={styles.adminCardSub}>Здесь редактируются и подкатегории, и верхние плитки каталога, и логика переходов storefront.</p>
           </div>
           <div className={styles.adminBadgeRow}>
-            <span className={styles.adminStatusBadge}>{categories.length} всего</span>
+            <span className={styles.adminStatusBadge}>{categories.length} категорий</span>
+            <span className={styles.adminStatusBadge}>{catalogSections.length} разделов</span>
           </div>
         </div>
 
         <div className={styles.adminSummaryGrid}>
           <div className={styles.adminSummaryCard}>
-            <p className={styles.adminSummaryLabel}>Видимые категории</p>
-            <p className={styles.adminSummaryValue}>{visibleCount}</p>
-            <p className={styles.adminSummaryText}>Используются в витрине и верхнем уровне каталога.</p>
+            <p className={styles.adminSummaryLabel}>Верхние разделы</p>
+            <p className={styles.adminSummaryValue}>{catalogSections.length}</p>
+            <p className={styles.adminSummaryText}>Плитки первого экрана каталога.</p>
           </div>
           <div className={styles.adminSummaryCard}>
-            <p className={styles.adminSummaryLabel}>Скрытые категории</p>
-            <p className={styles.adminSummaryValue}>{hiddenCount}</p>
-            <p className={styles.adminSummaryText}>Остаются в системе, но не показываются покупателям.</p>
+            <p className={styles.adminSummaryLabel}>Подкатегории в каталоге</p>
+            <p className={styles.adminSummaryValue}>{catalogVisibleCount}</p>
+            <p className={styles.adminSummaryText}>Участвуют в пути “плитки → список → листинг”.</p>
           </div>
           <div className={styles.adminSummaryCard}>
             <p className={styles.adminSummaryLabel}>Связанные товары</p>
             <p className={styles.adminSummaryValue}>{linkedProductsCount}</p>
-            <p className={styles.adminSummaryText}>Показывает, насколько категория уже участвует в каталоге.</p>
+            <p className={styles.adminSummaryText}>Показывает влияние правок на storefront.</p>
           </div>
           <div className={styles.adminSummaryCard}>
             <p className={styles.adminSummaryLabel}>После фильтрации</p>
             <p className={styles.adminSummaryValue}>{filteredCategories.length}</p>
-            <p className={styles.adminSummaryText}>Текущий рабочий список по поиску и видимости.</p>
+            <p className={styles.adminSummaryText}>Текущий рабочий список категорий.</p>
           </div>
         </div>
 
+        <div className={styles.adminCallout}>
+          <p className={styles.adminCalloutTitle}>Как управлять верхними плитками</p>
+          <p className={styles.adminCalloutText}>Используйте одинаковый код верхнего раздела у нужных подкатегорий. Заголовок, описание, порядок и визуал этого раздела также задаются здесь.</p>
+        </div>
+
+        {catalogSections.length > 0 ? (
+          <div className={styles.adminLinkGrid}>
+            {catalogSections.map((section) => (
+              <article key={section.slug} className={styles.adminLinkCard}>
+                <p className={styles.adminLinkTitle}>{section.visual ? `${section.visual} ` : ''}{section.title}</p>
+                <p className={styles.adminLinkText}>{section.description}</p>
+                <div className={styles.adminMetaGrid}>
+                  <div className={styles.adminMetaCell}>
+                    <p className={styles.adminMetaLabel}>Код</p>
+                    <p className={styles.adminMetaValue}>{section.slug}</p>
+                  </div>
+                  <div className={styles.adminMetaCell}>
+                    <p className={styles.adminMetaLabel}>Подкатегории</p>
+                    <p className={styles.adminMetaValue}>{section.categoriesCount}</p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : null}
+      </section>
+
+      <section className={styles.adminCard}>
         <div className={styles.adminFiltersGrid}>
           <label className={styles.adminField}>
             <span className={styles.adminLabel}>Поиск</span>
-            <input
-              className={styles.adminInput}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Название, slug, текст"
-            />
+            <input className={styles.adminInput} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Название, slug, верхний раздел" />
           </label>
-
           <label className={styles.adminField}>
-            <span className={styles.adminLabel}>Видимость</span>
-            <select
-              className={styles.adminSelect}
-              value={visibilityFilter}
-              onChange={(event) =>
-                setVisibilityFilter(event.target.value as 'all' | 'visible' | 'hidden')
-              }
-            >
+            <span className={styles.adminLabel}>Статус</span>
+            <select className={styles.adminSelect} value={visibilityFilter} onChange={(event) => setVisibilityFilter(event.target.value as 'all' | 'visible' | 'hidden')}>
               <option value="all">Все категории</option>
-              <option value="visible">Только видимые</option>
+              <option value="visible">Только активные</option>
               <option value="hidden">Только скрытые</option>
+            </select>
+          </label>
+          <label className={styles.adminField}>
+            <span className={styles.adminLabel}>Участие в каталоге</span>
+            <select className={styles.adminSelect} value={catalogFilter} onChange={(event) => setCatalogFilter(event.target.value as 'all' | 'catalog' | 'hidden')}>
+              <option value="all">Все</option>
+              <option value="catalog">Только в каталоге</option>
+              <option value="hidden">Скрытые из каталога</option>
             </select>
           </label>
         </div>
 
         <div className={styles.adminToolbar}>
-          <p className={styles.adminToolbarMeta}>
-            В рабочем списке{' '}
-            <span className={styles.adminToolbarStrong}>{filteredCategories.length}</span>{' '}
-            категорий.
-          </p>
-          {(search.trim() || visibilityFilter !== 'all') ? (
-            <button
-              type="button"
-              className={styles.adminSecondaryButton}
-              onClick={() => {
-                setSearch('');
-                setVisibilityFilter('all');
-              }}
-            >
+          <p className={styles.adminToolbarMeta}>В рабочем списке <span className={styles.adminToolbarStrong}>{filteredCategories.length}</span> категорий.</p>
+          {(search.trim() || visibilityFilter !== 'all' || catalogFilter !== 'all') ? (
+            <button type="button" className={styles.adminSecondaryButton} onClick={() => { setSearch(''); setVisibilityFilter('all'); setCatalogFilter('all'); }}>
               Сбросить фильтры
             </button>
           ) : null}
-        </div>
-
-        <div className={styles.adminCallout}>
-          <p className={styles.adminCalloutTitle}>Что важно помнить</p>
-          <p className={styles.adminCalloutText}>
-            Удаление категории не удаляет товары. Связанные карточки останутся в каталоге, но
-            потеряют привязку к разделу, поэтому перед удалением лучше проверить карточки товаров.
-          </p>
         </div>
       </section>
 
       <section className={styles.adminCard}>
         <div className={styles.adminFormSectionHead}>
-          <h2 className={styles.adminCardTitle}>Создать категорию</h2>
-          <p className={styles.adminCardSub}>
-            Новая категория сразу появится в списке и будет готова к связке с товарами.
-          </p>
+          <h2 className={styles.adminCardTitle}>Создать подкатегорию</h2>
+          <p className={styles.adminCardSub}>Новая категория может сразу попасть в нужный верхний раздел каталога.</p>
         </div>
-
-        <form className={styles.adminForm} onSubmit={onCreate} aria-busy={isPending}>
-          <div className={styles.adminInlineRow}>
-            <label className={styles.adminField}>
-              <span className={styles.adminLabel}>Название</span>
-              <input className={styles.adminInput} value={title} onChange={(event) => setTitle(event.target.value)} required />
-            </label>
-
-            <label className={styles.adminField}>
-              <span className={styles.adminLabel}>Слаг</span>
-              <div className={styles.adminInlineActionRow}>
-                <input className={styles.adminInput} value={slug} onChange={(event) => setSlug(event.target.value)} required />
-                <button
-                  type="button"
-                  className={styles.adminActionButton}
-                  onClick={() => setSlug(slugify(title))}
-                  disabled={!title.trim() || isPending}
-                >
-                  Из названия
-                </button>
-              </div>
-              <span className={styles.adminFieldHint}>
-                Используйте строчные латинские буквы, цифры и дефисы.
-              </span>
-            </label>
-          </div>
-
-          <div className={styles.adminInlineRow}>
-            <label className={styles.adminField}>
-              <span className={styles.adminLabel}>Короткий текст</span>
-              <input className={styles.adminInput} value={shortText} onChange={(event) => setShortText(event.target.value)} />
-              <span className={styles.adminFieldHint}>
-                Короткая подпись для витрины и переходов в каталог.
-              </span>
-            </label>
-            <label className={styles.adminField}>
-              <span className={styles.adminLabel}>Порядок вывода</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                className={styles.adminInput}
-                value={sortOrder}
-                onChange={(event) => setSortOrder(event.target.value)}
-              />
-              <span className={styles.adminFieldHint}>Чем меньше число, тем выше категория в списке.</span>
-            </label>
-          </div>
-
-          <label className={styles.adminField}>
-            <span className={styles.adminLabel}>Описание</span>
-            <textarea className={styles.adminTextarea} value={description} onChange={(event) => setDescription(event.target.value)} rows={3} />
-          </label>
-
-          <label className={styles.adminCheckboxRow}>
-            <input
-              type="checkbox"
-              className={styles.adminCheckbox}
-              checked={isActive}
-              onChange={(event) => setIsActive(event.target.checked)}
-            />
-            <span className={styles.adminLabel}>Показывать на витрине</span>
-          </label>
-
-          <button type="submit" className={styles.adminPrimaryButton} disabled={isPending}>
-            {isPending ? 'Создаем...' : 'Создать категорию'}
-          </button>
-
-          {errorMessage && <p className={styles.adminError}>{errorMessage}</p>}
-          {successMessage && <p className={styles.adminSuccess}>{successMessage}</p>}
-        </form>
+        <CategoryEditor
+          submitLabel="Создать категорию"
+          successLabel="Категория создана и готова к показу в каталоге."
+          resetOnSuccess
+          onSubmit={async (payload) => {
+            try {
+              const response = await fetch('/api/admin/categories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload),
+              });
+              const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+              if (!response.ok || !data?.ok) {
+                return { ok: false as const, error: data?.error };
+              }
+              router.refresh();
+              return { ok: true as const };
+            } catch {
+              return { ok: false as const, error: undefined };
+            }
+          }}
+        />
       </section>
 
       {filteredCategories.length === 0 ? (
         <StoreEmptyState
           title={categories.length === 0 ? 'Категорий пока нет' : 'Совпадений не найдено'}
-          description={
-            categories.length === 0
-              ? 'Создайте первую категорию, чтобы упорядочить каталог и входы на витрине.'
-              : 'Измените фильтры или поисковый запрос.'
-          }
+          description={categories.length === 0 ? 'Создайте первую категорию, чтобы управлять плитками каталога и структурой витрины.' : 'Измените фильтры или поисковый запрос.'}
         />
       ) : (
         <div className={styles.adminCardList}>
           {filteredCategories.map((category) => (
-            <CategoryRow key={category.id} category={category} />
+            <article key={category.id} className={styles.adminCard}>
+              <div className={styles.adminCardHead}>
+                <div>
+                  <h3 className={styles.adminCardTitle}>{category.title}</h3>
+                  <p className={styles.adminCardSub}>{category.productsCount} связанных товаров · {category.slug}</p>
+                </div>
+                <div className={styles.adminBadgeRow}>
+                  <span className={styles.adminStatusBadge}>{category.isActive ? 'Включена' : 'Скрыта'}</span>
+                  <span className={styles.adminStatusBadge}>{category.catalogVisible ? 'Есть в каталоге' : 'Скрыта из каталога'}</span>
+                </div>
+              </div>
+              <CategoryEditor
+                category={category}
+                submitLabel="Сохранить"
+                successLabel="Категория и настройки каталога сохранены."
+                onSubmit={async (payload) => {
+                  try {
+                    const response = await fetch(`/api/admin/categories/${category.id}`, {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify(payload),
+                    });
+                    const data = (await response.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+                    if (!response.ok || !data?.ok) {
+                      return { ok: false as const, error: data?.error };
+                    }
+                    router.refresh();
+                    return { ok: true as const };
+                  } catch {
+                    return { ok: false as const, error: undefined };
+                  }
+                }}
+              />
+              <div className={styles.adminCalloutWarn}>
+                <p className={styles.adminCalloutTitle}>Удаление категории</p>
+                <p className={styles.adminCalloutText}>
+                  При удалении товары останутся в системе, но потеряют привязку к этой категории.
+                </p>
+              </div>
+              <CategoryDeleteButton categoryId={category.id} onDeleted={() => router.refresh()} />
+            </article>
           ))}
         </div>
       )}

@@ -169,6 +169,9 @@ function buildLabel(title: string): string {
 
 function withPresentationCategories(categories: StorefrontCategory[]): StorefrontCategory[] {
   const actual = categories.filter((category) => category.id !== 'all');
+  if (actual.length > 0) {
+    return [{ id: 'all', slug: 'all', title: 'Все' }, ...actual];
+  }
   const actualSlugs = new Set(actual.map((category) => category.slug));
   const missing = presentationCategoryPool
     .filter((category) => !actualSlugs.has(category.slug))
@@ -683,12 +686,23 @@ async function fetchActiveCategories(): Promise<StorefrontCategory[]> {
         }
         return left.title.localeCompare(right.title);
       })
-      .map((row) => ({
-        id: row.id,
-        slug: row.slug,
-        title: row.title,
-        description: parseTaxonomyMetadata(row.metadata).shortText ?? row.description,
-      })),
+      .map((row) => {
+        const metadata = parseTaxonomyMetadata(row.metadata);
+
+        return {
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          description: metadata.shortText ?? row.description,
+          sortOrder: metadata.displayOrder,
+          catalogGroupSlug: metadata.catalogGroupSlug,
+          catalogGroupTitle: metadata.catalogGroupTitle,
+          catalogGroupDescription: metadata.catalogGroupDescription,
+          catalogGroupOrder: metadata.catalogGroupOrder,
+          catalogVisible: metadata.catalogVisible,
+          catalogVisual: metadata.catalogVisual,
+        };
+      }),
   ]);
 }
 
@@ -698,6 +712,13 @@ export interface StorefrontCategory {
   title: string;
   description?: string | null;
   isPresentationOnly?: boolean;
+  sortOrder?: number;
+  catalogGroupSlug?: string | null;
+  catalogGroupTitle?: string | null;
+  catalogGroupDescription?: string | null;
+  catalogGroupOrder?: number;
+  catalogVisible?: boolean;
+  catalogVisual?: string | null;
 }
 
 export interface StorefrontCollection {

@@ -119,9 +119,9 @@ export default async function AdminPage() {
                 </p>
               </Link>
               <Link href="/admin/categories" className={adminStyles.adminLinkCard}>
-                <p className={adminStyles.adminLinkTitle}>Категории</p>
+                <p className={adminStyles.adminLinkTitle}>Каталог и витрина</p>
                 <p className={adminStyles.adminLinkText}>
-                  Навигация витрины, порядок показа и связь товаров с разделами каталога.
+                  Верхние плитки, подкатегории, структура переходов и связь товаров с каталогом.
                 </p>
               </Link>
               <Link href="/admin/collections" className={adminStyles.adminLinkCard}>

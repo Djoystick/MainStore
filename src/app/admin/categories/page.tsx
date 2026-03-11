@@ -11,7 +11,7 @@ export default async function AdminCategoriesPage() {
   const categoriesResult = await getAdminCategories();
 
   return (
-    <AdminScreen title="Категории" subtitle="Структура каталога для витрины и навигации" back={true}>
+    <AdminScreen title="Каталог" subtitle="Плитки, подкатегории и структура переходов витрины" back={true}>
       {categoriesResult.message && (
         <section
           className={classNames(

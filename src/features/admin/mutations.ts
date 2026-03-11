@@ -93,6 +93,22 @@ function validateTaxonomyInput(
     return kind === 'category' ? 'invalid_category_sort_order' : 'invalid_collection_sort_order';
   }
 
+  if (kind === 'category') {
+    const categoryInput = input as CategoryUpsertInput;
+    const normalizedGroupSlug = normalizeText(categoryInput.catalogGroupSlug, 120);
+
+    if (normalizedGroupSlug && !isSlugValid(normalizedGroupSlug)) {
+      return 'invalid_catalog_group_slug';
+    }
+
+    if (
+      categoryInput.catalogGroupOrder !== undefined &&
+      (!Number.isInteger(categoryInput.catalogGroupOrder) || categoryInput.catalogGroupOrder < 0)
+    ) {
+      return 'invalid_catalog_group_order';
+    }
+  }
+
   return null;
 }
 
@@ -862,6 +878,12 @@ export async function createAdminCategory(
         metadata: buildTaxonomyMetadata({
           shortText: input.shortText,
           displayOrder: input.sortOrder,
+          catalogGroupSlug: input.catalogGroupSlug,
+          catalogGroupTitle: input.catalogGroupTitle,
+          catalogGroupDescription: input.catalogGroupDescription,
+          catalogGroupOrder: input.catalogGroupOrder,
+          catalogVisible: input.catalogVisible,
+          catalogVisual: input.catalogVisual,
         }),
       } as never,
     )
@@ -910,6 +932,12 @@ export async function updateAdminCategory(
         metadata: buildTaxonomyMetadata({
           shortText: input.shortText,
           displayOrder: input.sortOrder,
+          catalogGroupSlug: input.catalogGroupSlug,
+          catalogGroupTitle: input.catalogGroupTitle,
+          catalogGroupDescription: input.catalogGroupDescription,
+          catalogGroupOrder: input.catalogGroupOrder,
+          catalogVisible: input.catalogVisible,
+          catalogVisual: input.catalogVisual,
         }),
       } as never,
     )

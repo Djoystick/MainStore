@@ -170,7 +170,8 @@ export default async function CatalogPage({
   const categoryGroups = buildCatalogCategoryGroups(catalogData.categories);
   const selectedCategory =
     catalogData.categories.find((category) => category.slug === selectedCategorySlug) ?? null;
-  const inferredGroupSlug = inferCatalogGroupSlug(selectedCategory?.slug ?? null);
+  const inferredGroupSlug =
+    selectedCategory?.catalogGroupSlug ?? inferCatalogGroupSlug(selectedCategory?.slug ?? null);
   const selectedGroup =
     categoryGroups.find((group) => group.slug === selectedGroupSlug) ??
     categoryGroups.find((group) => group.slug === inferredGroupSlug) ??
@@ -268,6 +269,7 @@ export default async function CatalogPage({
               className={styles.categoryShortcut}
               aria-label={`Открыть раздел ${group.title}`}
             >
+              {group.visual ? <span className={styles.categoryShortcutVisual}>{group.visual}</span> : null}
               <p className={styles.categoryShortcutTitle}>{group.title}</p>
               <p className={styles.categoryShortcutSub}>{group.description}</p>
             </Link>
@@ -287,7 +289,9 @@ export default async function CatalogPage({
               className={styles.categoryListItem}
               aria-label={`Открыть подкатегорию ${category.title}`}
             >
-              <span className={styles.categoryListIcon}>{category.title.slice(0, 1)}</span>
+              <span className={styles.categoryListIcon}>
+                {category.catalogVisual || category.title.slice(0, 1)}
+              </span>
               <span className={styles.categoryListCopy}>
                 <span className={styles.categoryListTitle}>{category.title}</span>
                 <span className={styles.categoryListText}>

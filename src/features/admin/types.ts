@@ -15,6 +15,12 @@ export interface AdminCategoryOption {
   isActive: boolean;
   sortOrder: number;
   productsCount: number;
+  catalogGroupSlug: string | null;
+  catalogGroupTitle: string | null;
+  catalogGroupDescription: string | null;
+  catalogGroupOrder: number;
+  catalogVisible: boolean;
+  catalogVisual: string | null;
 }
 
 export interface AdminCollectionOption {
@@ -185,6 +191,12 @@ export interface CategoryUpsertInput {
   shortText?: string | null;
   isActive: boolean;
   sortOrder: number;
+  catalogGroupSlug?: string | null;
+  catalogGroupTitle?: string | null;
+  catalogGroupDescription?: string | null;
+  catalogGroupOrder?: number;
+  catalogVisible?: boolean;
+  catalogVisual?: string | null;
 }
 
 export interface CollectionUpsertInput {

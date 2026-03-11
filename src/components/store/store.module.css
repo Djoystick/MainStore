@@ -601,6 +601,23 @@
   color: var(--store-hint);
 }
 
+.categoryShortcutVisual {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  min-height: 38px;
+  width: fit-content;
+  padding: 0 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--store-accent-strong);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 800;
+}
+
 .scrollRow {
   display: flex;
   gap: 10px;
@@ -2779,10 +2796,14 @@
   line-height: 1.18;
 }
 
+.productDescription {
+  color: var(--store-text-soft);
+}
+
 .productMetaBadge {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--store-text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--store-text-soft);
 }
 
 .productStatusWarn,
@@ -2803,8 +2824,9 @@
 
 .productDiscountBadge,
 .miniProductBadge {
-  background: rgba(180, 156, 255, 0.16);
-  color: var(--store-accent-strong);
+  background: rgba(180, 156, 255, 0.2);
+  border: 1px solid rgba(214, 199, 255, 0.22);
+  color: #f4efff;
 }
 
 .miniProductBadgeMuted,
@@ -2825,13 +2847,15 @@
 .productPrice {
   color: var(--store-text);
   font-size: 22px;
+  text-shadow: 0 1px 8px rgba(4, 3, 10, 0.28);
 }
 
 .productPriceCompare,
 .miniProductCompare,
 .cartItemPriceCompare,
 .detailPriceCompare {
-  color: var(--store-hint);
+  color: rgba(231, 235, 242, 0.82);
+  text-decoration-color: rgba(231, 235, 242, 0.48);
 }
 
 .productCardCta {
@@ -2842,8 +2866,9 @@
   min-height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  background: rgba(180, 156, 255, 0.14);
-  color: var(--store-accent-strong);
+  background: rgba(180, 156, 255, 0.2);
+  border: 1px solid rgba(214, 199, 255, 0.18);
+  color: #f4efff;
   font-size: 13px;
   line-height: 1;
   font-weight: 700;
