@@ -6,12 +6,16 @@ import { ProductCard } from '@/components/store/ProductCard';
 import { StoreEmptyState } from '@/components/store/StoreEmptyState';
 import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
-import { classNames } from '@/css/classnames';
-import { getCurrentUserContext } from '@/features/auth';
-import { getCatalogStorefrontData } from '@/features/storefront/data';
-import { getFavoriteProductIdsForProfile } from '@/features/user-store/data';
 import type { StoreProduct } from '@/components/store/types';
 import styles from '@/components/store/store.module.css';
+import { classNames } from '@/css/classnames';
+import { getCurrentUserContext } from '@/features/auth';
+import {
+  buildCatalogCategoryGroups,
+  inferCatalogGroupSlug,
+} from '@/features/storefront/catalog-hierarchy';
+import { getCatalogStorefrontData } from '@/features/storefront/data';
+import { getFavoriteProductIdsForProfile } from '@/features/user-store/data';
 
 type CatalogSort = 'popular' | 'newest' | 'price_asc' | 'price_desc' | 'discount';
 
@@ -45,6 +49,7 @@ function normalizeSort(value: string | string[] | undefined): CatalogSort {
 
 function buildCatalogHref({
   query,
+  group,
   category,
   collection,
   sort,
@@ -53,6 +58,7 @@ function buildCatalogHref({
   featured,
 }: {
   query?: string;
+  group?: string;
   category?: string;
   collection?: string;
   sort?: CatalogSort;
@@ -64,6 +70,9 @@ function buildCatalogHref({
 
   if (query) {
     params.set('q', query);
+  }
+  if (group) {
+    params.set('group', group);
   }
   if (category) {
     params.set('category', category);
@@ -123,6 +132,19 @@ function sortProducts(products: StoreProduct[], sort: CatalogSort): StoreProduct
   return sorted;
 }
 
+function pluralizeProducts(count: number): string {
+  const remainder10 = count % 10;
+  const remainder100 = count % 100;
+
+  if (remainder10 === 1 && remainder100 !== 11) {
+    return 'товар';
+  }
+  if (remainder10 >= 2 && remainder10 <= 4 && (remainder100 < 12 || remainder100 > 14)) {
+    return 'товара';
+  }
+  return 'товаров';
+}
+
 export default async function CatalogPage({
   searchParams,
 }: {
@@ -134,8 +156,10 @@ export default async function CatalogPage({
     getCatalogStorefrontData(),
     getFavoriteProductIdsForProfile(profile?.id ?? null),
   ]);
+
   const searchQueryRaw = normalizeQueryValue(params.q);
   const searchQuery = searchQueryRaw.toLowerCase();
+  const selectedGroupSlug = normalizeQueryValue(params.group);
   const selectedCategorySlug = normalizeQueryValue(params.category);
   const selectedCollectionSlug = normalizeQueryValue(params.collection);
   const selectedSort = normalizeSort(params.sort);
@@ -143,10 +167,30 @@ export default async function CatalogPage({
   const discountedOnly = normalizeBooleanFlag(params.discounted);
   const featuredOnly = normalizeBooleanFlag(params.featured);
 
-  const selectedCategory = catalogData.categories.find((category) => category.slug === selectedCategorySlug);
-  const selectedCollection = catalogData.collections.find((collection) => collection.slug === selectedCollectionSlug);
+  const categoryGroups = buildCatalogCategoryGroups(catalogData.categories);
+  const selectedCategory =
+    catalogData.categories.find((category) => category.slug === selectedCategorySlug) ?? null;
+  const inferredGroupSlug = inferCatalogGroupSlug(selectedCategory?.slug ?? null);
+  const selectedGroup =
+    categoryGroups.find((group) => group.slug === selectedGroupSlug) ??
+    categoryGroups.find((group) => group.slug === inferredGroupSlug) ??
+    null;
+  const selectedCollection =
+    catalogData.collections.find((collection) => collection.slug === selectedCollectionSlug) ?? null;
   const collectionProductIdSet = new Set(selectedCollection?.products.map((product) => product.id) ?? []);
   const favoriteIdSet = new Set(favoriteIds);
+
+  const hasListingFilters = Boolean(
+    searchQuery ||
+      selectedCollection ||
+      selectedAvailability ||
+      discountedOnly ||
+      featuredOnly ||
+      selectedSort !== 'popular',
+  );
+  const isListingScreen = Boolean(selectedCategory || hasListingFilters);
+  const isSubcategoryScreen = Boolean(selectedGroup) && !isListingScreen;
+  const isTopLevelScreen = !selectedGroup && !isListingScreen;
 
   const filteredProducts = catalogData.products.filter((product) => {
     if (selectedCategory && selectedCategory.id !== 'all' && product.categoryId !== selectedCategory.id) {
@@ -187,324 +231,248 @@ export default async function CatalogPage({
   });
 
   const sortedProducts = sortProducts(filteredProducts, selectedSort);
-  const hasActiveFilters = Boolean(
-    searchQuery ||
-      (selectedCategory && selectedCategory.id !== 'all') ||
-      selectedCollection ||
-      selectedAvailability ||
-      discountedOnly ||
-      featuredOnly ||
-      selectedSort !== 'popular',
-  );
-
   const resultsTitle = selectedCollection
     ? `Подборка «${selectedCollection.title}»`
-    : selectedCategory && selectedCategory.id !== 'all'
+    : selectedCategory
       ? selectedCategory.title
       : searchQueryRaw
         ? `Поиск: «${searchQueryRaw}»`
-        : 'Все товары';
+        : selectedGroup
+          ? selectedGroup.title
+          : 'Каталог';
+  const resultSummary = `${sortedProducts.length} ${pluralizeProducts(sortedProducts.length)}`;
+  const subtitle = isTopLevelScreen
+    ? 'Выберите раздел каталога'
+    : isSubcategoryScreen && selectedGroup
+      ? `${selectedGroup.title}: выберите подкатегорию`
+      : selectedCategory
+        ? `Фильтры и товары в разделе «${selectedCategory.title}»`
+        : 'Фильтры, поиск и товарный листинг';
 
-  const resultSummary = `${sortedProducts.length} ${
-    sortedProducts.length === 1 ? 'товар' : sortedProducts.length >= 2 && sortedProducts.length <= 4 ? 'товара' : 'товаров'
-  }`;
-
-  const categoryTiles = catalogData.categories.filter((category) => category.id !== 'all').slice(0, 6);
-  const useListLayout = hasActiveFilters || Boolean(selectedCategory && selectedCategory.id !== 'all');
-  const showCategoryTiles = !hasActiveFilters;
+  const resetFiltersHref = buildCatalogHref({
+    group: selectedGroup?.slug,
+    category: selectedCategory?.slug,
+  });
+  const backToSubcategoriesHref = selectedGroup
+    ? buildCatalogHref({ group: selectedGroup.slug })
+    : '/catalog';
 
   return (
-    <StoreScreen title="Каталог" subtitle="Категории, подборки и понятный путь к нужному товару">
-      <section className={styles.catalogLead}>
-        <p className={styles.catalogLeadEyebrow}>Навигация по витрине</p>
-        <h2 className={styles.catalogLeadTitle}>{resultsTitle}</h2>
-        <p className={styles.catalogLeadText}>
-          {hasActiveFilters
-            ? `Сейчас на экране ${resultSummary.toLowerCase()} по выбранным условиям.`
-            : 'Сначала выберите раздел плиткой, а внутри переходите к более точному списку через поиск и фильтры.'}
-        </p>
-      </section>
-
-      {categoryTiles.length > 0 && showCategoryTiles ? (
-        <section className={styles.categoryShortcutGrid} aria-label="Основные категории каталога">
-          {categoryTiles.map((category) => {
-            const isActive = selectedCategory?.id === category.id;
-
-            return (
-              <Link
-                key={category.id}
-                href={buildCatalogHref({
-                  query: searchQueryRaw || undefined,
-                  category: category.slug,
-                  collection: undefined,
-                  sort: selectedSort,
-                  availability: selectedAvailability || undefined,
-                  discounted: discountedOnly,
-                  featured: featuredOnly,
-                })}
-                className={classNames(styles.categoryShortcut, isActive && styles.categoryShortcutActive)}
-                aria-label={`Открыть категорию ${category.title}`}
-              >
-                <p className={styles.categoryShortcutTitle}>{category.title}</p>
-                <p className={styles.categoryShortcutSub}>{category.description || 'Перейти в раздел'}</p>
-              </Link>
-            );
-          })}
+    <StoreScreen title="Каталог" subtitle={subtitle} back={!isTopLevelScreen}>
+      {isTopLevelScreen ? (
+        <section className={styles.categoryShortcutGrid} aria-label="Разделы каталога">
+          {categoryGroups.map((group) => (
+            <Link
+              key={group.slug}
+              href={buildCatalogHref({ group: group.slug })}
+              className={styles.categoryShortcut}
+              aria-label={`Открыть раздел ${group.title}`}
+            >
+              <p className={styles.categoryShortcutTitle}>{group.title}</p>
+              <p className={styles.categoryShortcutSub}>{group.description}</p>
+            </Link>
+          ))}
         </section>
       ) : null}
 
-      {categoryTiles.length > 0 && !showCategoryTiles ? (
-        <section className={styles.categoryList} aria-label="РџРµСЂРµС…РѕРґС‹ РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј">
-          {categoryTiles.map((category) => {
-            const isActive = selectedCategory?.id === category.id;
-
-            return (
-              <Link
-                key={category.id}
-                href={buildCatalogHref({
-                  query: searchQueryRaw || undefined,
-                  category: category.slug,
-                  collection: undefined,
-                  sort: selectedSort,
-                  availability: selectedAvailability || undefined,
-                  discounted: discountedOnly,
-                  featured: featuredOnly,
-                })}
-                className={classNames(styles.categoryListItem, isActive && styles.categoryListItemActive)}
-                aria-label={`РћС‚РєСЂС‹С‚СЊ РєР°С‚РµРіРѕСЂРёСЋ ${category.title}`}
-              >
-                <span className={styles.categoryListIcon}>{category.title.slice(0, 1)}</span>
-                <span className={styles.categoryListCopy}>
-                  <span className={styles.categoryListTitle}>{category.title}</span>
-                  <span className={styles.categoryListText}>
-                    {category.description || 'РЈС‚РѕС‡РЅРёС‚Рµ РІС‹Р±РѕСЂ Рё РїСЂРѕРґРѕР»Р¶РёС‚Рµ РїРѕРёСЃРє РІРЅСѓС‚СЂРё СЂР°Р·РґРµР»Р°.'}
-                  </span>
+      {isSubcategoryScreen && selectedGroup ? (
+        <section className={styles.categoryList} aria-label={`Подкатегории раздела ${selectedGroup.title}`}>
+          {selectedGroup.subcategories.map((category) => (
+            <Link
+              key={category.id}
+              href={buildCatalogHref({
+                group: selectedGroup.slug,
+                category: category.slug,
+              })}
+              className={styles.categoryListItem}
+              aria-label={`Открыть подкатегорию ${category.title}`}
+            >
+              <span className={styles.categoryListIcon}>{category.title.slice(0, 1)}</span>
+              <span className={styles.categoryListCopy}>
+                <span className={styles.categoryListTitle}>{category.title}</span>
+                <span className={styles.categoryListText}>
+                  {category.description || 'Откройте раздел и перейдите к товарам.'}
                 </span>
-                <span className={styles.categoryListArrow}>›</span>
-              </Link>
-            );
-          })}
+              </span>
+              <span className={styles.categoryListArrow}>›</span>
+            </Link>
+          ))}
         </section>
       ) : null}
 
-      {!showCategoryTiles ? (
+      {isListingScreen ? (
         <>
+          {catalogData.message ? (
+            <section
+              className={classNames(
+                styles.dataNotice,
+                catalogData.status === 'fallback_error' && styles.dataNoticeError,
+              )}
+            >
+              <p className={styles.dataNoticeTitle}>Состояние каталога</p>
+              <p className={styles.dataNoticeText}>{catalogData.message}</p>
+            </section>
+          ) : null}
+
           <form action="/catalog" method="get" className={styles.catalogToolbar}>
-        {selectedCategory && selectedCategory.id !== 'all' ? (
-          <input type="hidden" name="category" value={selectedCategory.slug} />
-        ) : null}
-        {selectedCollection ? <input type="hidden" name="collection" value={selectedCollection.slug} /> : null}
-        {discountedOnly ? <input type="hidden" name="discounted" value="1" /> : null}
-        {featuredOnly ? <input type="hidden" name="featured" value="1" /> : null}
-        {selectedAvailability ? <input type="hidden" name="availability" value={selectedAvailability} /> : null}
+            {selectedGroup ? <input type="hidden" name="group" value={selectedGroup.slug} /> : null}
+            {selectedCategory ? <input type="hidden" name="category" value={selectedCategory.slug} /> : null}
+            {selectedCollection ? <input type="hidden" name="collection" value={selectedCollection.slug} /> : null}
+            {discountedOnly ? <input type="hidden" name="discounted" value="1" /> : null}
+            {featuredOnly ? <input type="hidden" name="featured" value="1" /> : null}
+            {selectedAvailability ? <input type="hidden" name="availability" value={selectedAvailability} /> : null}
 
-        <div className={styles.searchRow}>
-          <input
-            className={styles.searchInput}
-            name="q"
-            type="text"
-            placeholder="Найти товар, категорию или подборку"
-            defaultValue={searchQueryRaw}
-            aria-label="Поиск по каталогу"
-          />
-          <button type="submit" className={styles.filterButton} aria-label="Применить поиск по каталогу">
-            Найти
-          </button>
-        </div>
+            <div className={styles.searchRow}>
+              <input
+                className={styles.searchInput}
+                name="q"
+                type="text"
+                placeholder="Найти товар в этом разделе"
+                defaultValue={searchQueryRaw}
+                aria-label="Поиск по каталогу"
+              />
+              <button type="submit" className={styles.filterButton} aria-label="Применить поиск по каталогу">
+                Найти
+              </button>
+            </div>
 
-        <div className={styles.catalogToolbarRow}>
-          <label className={styles.catalogSelectLabel}>
-            <span className={styles.catalogSelectCaption}>Сортировка</span>
-            <select name="sort" defaultValue={selectedSort} className={styles.catalogSelect}>
-              <option value="popular">Сначала популярные</option>
-              <option value="newest">Сначала новые</option>
-              <option value="discount">Сначала выгодные</option>
-              <option value="price_asc">Цена по возрастанию</option>
-              <option value="price_desc">Цена по убыванию</option>
-            </select>
-          </label>
-        </div>
+            <div className={styles.catalogToolbarRow}>
+              <label className={styles.catalogSelectLabel}>
+                <span className={styles.catalogSelectCaption}>Сортировка</span>
+                <select name="sort" defaultValue={selectedSort} className={styles.catalogSelect}>
+                  <option value="popular">Сначала популярные</option>
+                  <option value="newest">Сначала новые</option>
+                  <option value="discount">Сначала выгодные</option>
+                  <option value="price_asc">Цена по возрастанию</option>
+                  <option value="price_desc">Цена по убыванию</option>
+                </select>
+              </label>
+            </div>
           </form>
 
           <div className={styles.chipRow}>
-        <Link
-          href={buildCatalogHref({
-            query: searchQueryRaw || undefined,
-            sort: selectedSort,
-          })}
-          className={classNames(
-            styles.chip,
-            !selectedCategory &&
-              !selectedCollection &&
-              !selectedAvailability &&
-              !discountedOnly &&
-              !featuredOnly &&
-              selectedSort === 'popular' &&
-              styles.chipActive,
-          )}
-        >
-          Все
-        </Link>
-        <Link
-          href={buildCatalogHref({
-            query: searchQueryRaw || undefined,
-            category: selectedCategory && selectedCategory.id !== 'all' ? selectedCategory.slug : undefined,
-            collection: selectedCollection?.slug,
-            sort: selectedSort,
-            availability: selectedAvailability === 'in_stock' ? undefined : 'in_stock',
-            discounted: discountedOnly,
-            featured: featuredOnly,
-          })}
-          className={classNames(styles.chip, selectedAvailability === 'in_stock' && styles.chipActive)}
-        >
-          Можно заказать
-        </Link>
-        <Link
-          href={buildCatalogHref({
-            query: searchQueryRaw || undefined,
-            category: selectedCategory && selectedCategory.id !== 'all' ? selectedCategory.slug : undefined,
-            collection: selectedCollection?.slug,
-            sort: selectedSort,
-            availability: selectedAvailability || undefined,
-            discounted: !discountedOnly,
-            featured: featuredOnly,
-          })}
-          className={classNames(styles.chip, discountedOnly && styles.chipActive)}
-        >
-          Со скидкой
-        </Link>
-        <Link
-          href={buildCatalogHref({
-            query: searchQueryRaw || undefined,
-            category: selectedCategory && selectedCategory.id !== 'all' ? selectedCategory.slug : undefined,
-            collection: selectedCollection?.slug,
-            sort: selectedSort,
-            availability: selectedAvailability || undefined,
-            discounted: discountedOnly,
-            featured: !featuredOnly,
-          })}
-          className={classNames(styles.chip, featuredOnly && styles.chipActive)}
-        >
-          Рекомендуемые
-        </Link>
+            <Link
+              href={buildCatalogHref({
+                query: searchQueryRaw || undefined,
+                group: selectedGroup?.slug,
+                category: selectedCategory?.slug,
+                sort: selectedSort,
+              })}
+              className={classNames(
+                styles.chip,
+                !selectedAvailability && !discountedOnly && !featuredOnly && styles.chipActive,
+              )}
+            >
+              Все
+            </Link>
+            <Link
+              href={buildCatalogHref({
+                query: searchQueryRaw || undefined,
+                group: selectedGroup?.slug,
+                category: selectedCategory?.slug,
+                sort: selectedSort,
+                availability: selectedAvailability === 'in_stock' ? undefined : 'in_stock',
+                discounted: discountedOnly,
+                featured: featuredOnly,
+              })}
+              className={classNames(styles.chip, selectedAvailability === 'in_stock' && styles.chipActive)}
+            >
+              В наличии
+            </Link>
+            <Link
+              href={buildCatalogHref({
+                query: searchQueryRaw || undefined,
+                group: selectedGroup?.slug,
+                category: selectedCategory?.slug,
+                sort: selectedSort,
+                availability: selectedAvailability || undefined,
+                discounted: !discountedOnly,
+                featured: featuredOnly,
+              })}
+              className={classNames(styles.chip, discountedOnly && styles.chipActive)}
+            >
+              Со скидкой
+            </Link>
+            <Link
+              href={buildCatalogHref({
+                query: searchQueryRaw || undefined,
+                group: selectedGroup?.slug,
+                category: selectedCategory?.slug,
+                sort: selectedSort,
+                availability: selectedAvailability || undefined,
+                discounted: discountedOnly,
+                featured: !featuredOnly,
+              })}
+              className={classNames(styles.chip, featuredOnly && styles.chipActive)}
+            >
+              Рекомендуемые
+            </Link>
           </div>
 
-          {catalogData.collections.length > 0 ? (
-        <StoreSection title="Подборки">
-          <div className={styles.collectionRail}>
-            {catalogData.collections.slice(0, 8).map((collection) => (
+          <div className={styles.catalogResultMeta}>
+            <p className={styles.catalogResultCount}>{resultSummary}</p>
+            {hasListingFilters ? (
               <Link
-                key={collection.id}
-                href={buildCatalogHref({
-                  query: searchQueryRaw || undefined,
-                  category: selectedCategory && selectedCategory.id !== 'all' ? selectedCategory.slug : undefined,
-                  collection: selectedCollection?.slug === collection.slug ? undefined : collection.slug,
-                  sort: selectedSort,
-                  availability: selectedAvailability || undefined,
-                  discounted: discountedOnly,
-                  featured: featuredOnly,
-                })}
-                className={classNames(
-                  styles.collectionCard,
-                  selectedCollection?.slug === collection.slug && styles.collectionCardActive,
-                )}
-                aria-label={`Открыть подборку ${collection.title}`}
+                href={resetFiltersHref}
+                className={styles.secondaryInlineLink}
+                aria-label="Сбросить фильтры каталога"
               >
-                <p className={styles.collectionTitle}>{collection.title}</p>
-                <p className={styles.collectionDescription}>{collection.description || 'Готовый сценарий покупок без лишнего поиска.'}</p>
-                <div className={styles.collectionItems}>
-                  {collection.products.slice(0, 2).map((product) => (
-                    <span key={product.id} className={styles.collectionItemPill}>
-                      {product.title}
-                    </span>
-                  ))}
-                </div>
+                Сбросить фильтры
               </Link>
-            ))}
+            ) : selectedGroup ? (
+              <Link
+                href={backToSubcategoriesHref}
+                className={styles.secondaryInlineLink}
+                aria-label="Вернуться к списку подкатегорий"
+              >
+                К подкатегориям
+              </Link>
+            ) : null}
           </div>
-        </StoreSection>
-          ) : null}
+
+          <StoreSection title={resultsTitle}>
+            {catalogData.status === 'empty' ? (
+              <StoreEmptyState
+                title="Каталог пока пуст"
+                description="Активные товары ещё не опубликованы. Когда витрина заполнится, позиции появятся здесь."
+              />
+            ) : sortedProducts.length === 0 ? (
+              <StoreEmptyState
+                title={
+                  searchQueryRaw
+                    ? `По запросу «${searchQueryRaw}» ничего не найдено`
+                    : selectedCategory
+                      ? `В разделе «${selectedCategory.title}» пока ничего нет`
+                      : 'Ничего не найдено'
+                }
+                description={
+                  selectedGroup
+                    ? 'Попробуйте открыть другую подкатегорию или снять часть фильтров.'
+                    : 'Попробуйте снять часть фильтров или вернуться ко всем разделам каталога.'
+                }
+                actionLabel={selectedGroup ? 'К подкатегориям' : 'К разделам каталога'}
+                actionHref={selectedGroup ? backToSubcategoriesHref : '/catalog'}
+              />
+            ) : (
+              <div className={styles.catalogGrid}>
+                {sortedProducts.map((product) => (
+                  <div key={product.id} className={styles.productCardShell}>
+                    <div className={styles.productCardFavorite}>
+                      <FavoriteToggleButton
+                        productId={product.id}
+                        initialFavorited={favoriteIdSet.has(product.id)}
+                        compact
+                      />
+                    </div>
+                    <ProductCard product={product} href={`/products/${product.slug}`} layout="grid" />
+                    <AddToCartButton productId={product.id} className={styles.productCardAction} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </StoreSection>
         </>
       ) : null}
-
-      {catalogData.message ? (
-        <section
-          className={classNames(
-            styles.dataNotice,
-            catalogData.status === 'fallback_error' && styles.dataNoticeError,
-          )}
-        >
-          <p className={styles.dataNoticeTitle}>Состояние каталога</p>
-          <p className={styles.dataNoticeText}>{catalogData.message}</p>
-          {(catalogData.status === 'fallback_error' || catalogData.status === 'fallback_env') && (
-            <div className={styles.dataNoticeActions}>
-              <Link href="/catalog" className={styles.dataNoticeRetry} aria-label="Повторить загрузку каталога">
-                Повторить
-              </Link>
-            </div>
-          )}
-        </section>
-      ) : null}
-
-      <div className={styles.catalogResultMeta}>
-        <p className={styles.catalogResultCount}>{resultSummary}</p>
-        {hasActiveFilters ? (
-          <Link href="/catalog" className={styles.secondaryInlineLink} aria-label="Сбросить все фильтры каталога">
-            Сбросить фильтры
-          </Link>
-        ) : null}
-      </div>
-
-      {catalogData.promoBanners[0] && !selectedCollection && !showCategoryTiles ? (
-        <section className={styles.bannerCard}>
-          <p className={styles.bannerEyebrow}>{catalogData.promoBanners[0].eyebrow}</p>
-          <h2 className={styles.bannerTitle}>{catalogData.promoBanners[0].title}</h2>
-          <p className={styles.bannerText}>{catalogData.promoBanners[0].description}</p>
-          <Link
-            href={catalogData.promoBanners[0].ctaHref}
-            className={styles.bannerAction}
-            aria-label={catalogData.promoBanners[0].ctaLabel}
-          >
-            {catalogData.promoBanners[0].ctaLabel}
-          </Link>
-        </section>
-      ) : null}
-
-      {!showCategoryTiles ? <StoreSection title={resultsTitle}>
-        {catalogData.status === 'empty' ? (
-          <StoreEmptyState
-            title="Каталог пока пуст"
-            description="Активные товары ещё не опубликованы. Когда витрина заполнится, позиции появятся здесь."
-          />
-        ) : sortedProducts.length === 0 ? (
-          <StoreEmptyState
-            title={searchQueryRaw ? `По запросу «${searchQueryRaw}» ничего не найдено` : 'Ничего не найдено'}
-            description="Попробуйте убрать часть условий, открыть другую категорию или вернуться ко всем товарам."
-            actionLabel="Показать все товары"
-            actionHref="/catalog"
-          />
-        ) : (
-          <div className={classNames(styles.catalogGrid, useListLayout && styles.catalogList)}>
-            {sortedProducts.map((product) => (
-              <div key={product.id} className={styles.productCardShell}>
-                <div className={styles.productCardFavorite}>
-                  <FavoriteToggleButton
-                    productId={product.id}
-                    initialFavorited={favoriteIdSet.has(product.id)}
-                    compact
-                  />
-                </div>
-                <ProductCard
-                  product={product}
-                  href={`/products/${product.slug}`}
-                  layout={useListLayout ? 'list' : 'grid'}
-                />
-                <AddToCartButton productId={product.id} className={styles.productCardAction} />
-              </div>
-            ))}
-          </div>
-        )}
-      </StoreSection> : null}
     </StoreScreen>
   );
 }

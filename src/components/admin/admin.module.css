@@ -872,8 +872,8 @@
 .adminNoAccess {
   border-color: var(--store-border);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
-    linear-gradient(180deg, rgba(37, 29, 54, 0.98), rgba(24, 20, 33, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(18, 20, 26, 0.98), rgba(8, 9, 12, 0.98));
   box-shadow: var(--store-shadow-card);
 }
 
@@ -894,13 +894,11 @@
 .adminDangerButton,
 .adminNoAccess {
   transition:
-    transform var(--store-motion-base) var(--store-motion-ease),
     box-shadow var(--store-motion-base) var(--store-motion-ease),
     border-color var(--store-motion-fast) ease,
     background-color var(--store-motion-fast) ease,
     background var(--store-motion-fast) ease,
-    color var(--store-motion-fast) ease,
-    opacity var(--store-motion-fast) ease;
+    color var(--store-motion-fast) ease;
 }
 
 .adminNavLinkActive {
@@ -927,18 +925,27 @@
   color: var(--store-text-soft);
 }
 
+.adminCardTitle,
+.adminPageLeadTitle,
+.adminLinkTitle,
+.adminSummaryValue,
+.adminCalloutTitle,
+.adminMetaValue {
+  color: var(--store-text);
+}
+
 .adminPageLead {
   border-color: var(--store-border-strong);
   background:
-    radial-gradient(circle at top right, rgba(214, 199, 255, 0.14), transparent 28%),
-    linear-gradient(145deg, rgba(44, 36, 63, 0.98), rgba(26, 21, 37, 0.98));
+    radial-gradient(circle at top right, rgba(214, 199, 255, 0.1), transparent 24%),
+    linear-gradient(145deg, rgba(18, 20, 26, 0.98), rgba(8, 9, 12, 0.98));
 }
 
 .adminSummaryCard,
 .adminMetaCell {
   background:
-    linear-gradient(180deg, rgba(180, 156, 255, 0.08), rgba(180, 156, 255, 0)),
-    linear-gradient(180deg, rgba(37, 29, 54, 0.96), rgba(27, 22, 38, 0.96));
+    linear-gradient(180deg, rgba(180, 156, 255, 0.04), rgba(180, 156, 255, 0)),
+    linear-gradient(180deg, rgba(18, 20, 26, 0.96), rgba(9, 10, 13, 0.96));
 }
 
 .adminActionLink,
@@ -950,7 +957,7 @@
 .adminActionLink,
 .adminSecondaryButton {
   border-color: var(--store-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--store-text);
 }
 
@@ -968,19 +975,19 @@
 
 .adminCallout {
   border-color: rgba(180, 156, 255, 0.24);
-  background: rgba(180, 156, 255, 0.12);
+  background: rgba(180, 156, 255, 0.08);
 }
 
 .adminCalloutWarn {
   border-color: rgba(240, 200, 135, 0.22);
-  background: rgba(240, 200, 135, 0.08);
+  background: rgba(240, 200, 135, 0.06);
 }
 
 .adminInput,
 .adminTextarea,
 .adminSelect {
-  border-color: rgba(201, 183, 255, 0.16);
-  background: rgba(13, 11, 18, 0.44);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--store-text);
 }
 
@@ -994,8 +1001,7 @@
   .adminSummaryCard:hover,
   .adminLinkCard:hover,
   .adminNoAccess:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 24px 40px rgba(4, 3, 10, 0.3);
+    box-shadow: 0 18px 28px rgba(4, 3, 10, 0.22);
   }
 
   .adminActionLink:hover,
@@ -1003,7 +1009,6 @@
   .adminSecondaryButton:hover,
   .adminDangerButton:hover,
   .adminNavLink:hover {
-    transform: translateY(-1px);
     border-color: var(--store-border-strong);
   }
 }

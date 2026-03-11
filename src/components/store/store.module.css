@@ -2384,20 +2384,16 @@
 
 .screen {
   background:
-    radial-gradient(circle at 14% -4%, rgba(180, 156, 255, 0.18), transparent 28%),
-    radial-gradient(circle at 88% 0%, rgba(117, 93, 196, 0.14), transparent 26%),
-    linear-gradient(180deg, #18131f 0, #15111a 220px, var(--store-bg) 100%);
+    radial-gradient(circle at 12% -4%, rgba(180, 156, 255, 0.09), transparent 26%),
+    radial-gradient(circle at 88% 0%, rgba(117, 93, 196, 0.08), transparent 24%),
+    linear-gradient(180deg, #090a0d 0, #07080b 220px, var(--store-bg) 100%);
   overflow-x: clip;
 }
 
 .header {
-  background: rgba(20, 17, 26, 0.82);
+  background: rgba(6, 7, 9, 0.9);
   border-bottom: 1px solid var(--store-border);
   box-shadow: 0 14px 34px rgba(5, 4, 10, 0.24);
-}
-
-.headerInner {
-  animation: store-fade-in-up var(--store-motion-screen) var(--store-motion-ease) both;
 }
 
 .headerTag,
@@ -2416,6 +2412,7 @@
 .catalogLeadText,
 .miniShelfDescription,
 .productDescription,
+.headerSubtitle,
 .panelText,
 .checkoutFieldHint,
 .checkoutHint,
@@ -2430,11 +2427,41 @@
 .infoLabel,
 .collectionItemPill,
 .catalogResultCount,
+.catalogSelectCaption,
+.categoryShortcutSub,
+.quickLinkSubtitle,
+.heroMetaItem,
+.headerTag,
 .productMetaBadge,
 .cartItemLineTotal,
 .cartItemDiscount,
 .orderItemSub {
   color: var(--store-text-soft);
+}
+
+.headerTitle,
+.heroTitle,
+.bannerTitle,
+.catalogLeadTitle,
+.sectionTitle,
+.collectionTitle,
+.productName,
+.panelTitle,
+.emptyStateTitle,
+.detailTitle,
+.detailDescription,
+.cartItemTitle,
+.orderCardTitle,
+.orderItemTitle,
+.infoValue,
+.infoValueCompact,
+.specsPreviewTitle,
+.specsGroupTitle,
+.reviewTitle,
+.reviewAuthor,
+.categoryListTitle,
+.categoryShortcutTitle {
+  color: var(--store-text);
 }
 
 .section,
@@ -2459,8 +2486,8 @@
 .quickLinkCard {
   border-color: var(--store-border);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
-    linear-gradient(180deg, rgba(37, 29, 54, 0.98), rgba(24, 20, 33, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(18, 20, 26, 0.98), rgba(8, 9, 12, 0.98));
   box-shadow: var(--store-shadow-card);
 }
 
@@ -2469,18 +2496,18 @@
 .adminEntryCard {
   border-color: var(--store-border-strong);
   background:
-    radial-gradient(circle at 92% 8%, rgba(215, 199, 255, 0.16), transparent 26%),
-    radial-gradient(circle at 12% 0%, rgba(124, 101, 204, 0.16), transparent 28%),
-    linear-gradient(145deg, rgba(46, 38, 67, 0.98), rgba(28, 23, 40, 0.98));
+    radial-gradient(circle at 92% 8%, rgba(215, 199, 255, 0.1), transparent 24%),
+    radial-gradient(circle at 12% 0%, rgba(124, 101, 204, 0.1), transparent 24%),
+    linear-gradient(145deg, rgba(20, 21, 28, 0.98), rgba(9, 10, 13, 0.98));
   color: var(--store-text);
   box-shadow: 0 26px 56px rgba(4, 3, 10, 0.38);
 }
 
 .heroMetaItem,
 .profileMetaBadge {
-  border-color: rgba(214, 199, 255, 0.14);
-  background: rgba(17, 14, 23, 0.46);
-  color: var(--store-text-soft);
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--store-text);
 }
 
 .heroButton,
@@ -2512,7 +2539,7 @@
 .dataNoticeRetry,
 .secondaryInlineLink {
   border-color: var(--store-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--store-text);
 }
 
@@ -2520,9 +2547,10 @@
 .catalogSelect,
 .checkoutInput,
 .checkoutTextarea {
-  background: rgba(13, 11, 18, 0.44);
-  border-color: rgba(201, 183, 255, 0.16);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  color: var(--store-text);
 }
 
 .searchInput::placeholder {
@@ -2530,9 +2558,9 @@
 }
 
 .chip {
-  border-color: rgba(201, 183, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
-  color: var(--store-text-soft);
+  color: var(--store-text);
 }
 
 .chipActive,
@@ -2560,7 +2588,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(214, 199, 255, 0.12), transparent 34%);
+  background: radial-gradient(circle at top right, rgba(214, 199, 255, 0.08), transparent 34%);
   pointer-events: none;
 }
 
@@ -2587,8 +2615,8 @@
   justify-content: flex-end;
   gap: 10px;
   background:
-    linear-gradient(180deg, rgba(214, 199, 255, 0.12), rgba(214, 199, 255, 0)),
-    linear-gradient(150deg, rgba(55, 44, 79, 0.98), rgba(28, 22, 39, 0.98));
+    linear-gradient(180deg, rgba(214, 199, 255, 0.07), rgba(214, 199, 255, 0)),
+    linear-gradient(150deg, rgba(16, 18, 24, 0.98), rgba(7, 8, 11, 0.98));
 }
 
 .categoryShortcutActive {
@@ -2604,7 +2632,7 @@
 
 .categoryShortcutSub {
   max-width: 17ch;
-  color: var(--store-text-soft);
+  color: var(--store-text);
 }
 
 .categoryList {
@@ -2627,8 +2655,8 @@
 .categoryListItemActive {
   border-color: var(--store-border-strong);
   background:
-    linear-gradient(180deg, rgba(180, 156, 255, 0.14), rgba(180, 156, 255, 0.02)),
-    linear-gradient(180deg, rgba(37, 29, 54, 0.98), rgba(24, 20, 33, 0.98));
+    linear-gradient(180deg, rgba(180, 156, 255, 0.09), rgba(180, 156, 255, 0.01)),
+    linear-gradient(180deg, rgba(18, 20, 26, 0.98), rgba(8, 9, 12, 0.98));
 }
 
 .categoryListIcon {
@@ -2638,8 +2666,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(180, 156, 255, 0.16);
-  border: 1px solid rgba(201, 183, 255, 0.18);
+  background: rgba(180, 156, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   color: var(--store-accent-strong);
   font-size: 16px;
   font-weight: 800;
@@ -2701,9 +2729,9 @@
 .productCardAction {
   width: 100%;
   min-height: 44px;
-  border: 1px solid rgba(201, 183, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
-  background: rgba(180, 156, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--store-text);
   font-size: 14px;
   line-height: 1;
@@ -2714,8 +2742,8 @@
   min-height: 292px;
   border-radius: 24px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
-    linear-gradient(180deg, rgba(36, 29, 52, 0.98), rgba(23, 19, 31, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(17, 19, 25, 0.98), rgba(8, 9, 12, 0.98));
 }
 
 .productCardCompact {
@@ -2752,8 +2780,9 @@
 }
 
 .productMetaBadge {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(201, 183, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--store-text);
 }
 
 .productStatusWarn,
@@ -2844,15 +2873,15 @@
 .miniShelfMint,
 .miniShelfSky {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
-    linear-gradient(145deg, rgba(39, 31, 57, 0.98), rgba(25, 21, 36, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    linear-gradient(145deg, rgba(16, 18, 24, 0.98), rgba(8, 9, 12, 0.98));
 }
 
 .collectionCardActive {
   border-color: var(--store-border-strong);
   background:
-    linear-gradient(180deg, rgba(180, 156, 255, 0.14), rgba(180, 156, 255, 0.03)),
-    linear-gradient(180deg, rgba(39, 31, 57, 0.96), rgba(25, 21, 36, 0.96));
+    linear-gradient(180deg, rgba(180, 156, 255, 0.1), rgba(180, 156, 255, 0.02)),
+    linear-gradient(180deg, rgba(17, 19, 25, 0.96), rgba(8, 9, 12, 0.96));
 }
 
 .bottomNavShell {
@@ -2863,7 +2892,7 @@
   width: min(100%, 560px);
   border: 1px solid var(--store-border);
   border-radius: 24px;
-  background: rgba(19, 16, 26, 0.78);
+  background: rgba(6, 7, 9, 0.9);
   box-shadow: 0 18px 40px rgba(4, 3, 10, 0.38);
   backdrop-filter: blur(18px);
   padding: 8px 10px 12px;
@@ -2922,8 +2951,8 @@
   border-radius: 18px;
   border-color: var(--store-border);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
-    linear-gradient(180deg, rgba(35, 28, 51, 0.98), rgba(24, 20, 33, 0.98));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+    linear-gradient(180deg, rgba(17, 19, 25, 0.98), rgba(8, 9, 12, 0.98));
 }
 
 .optionGroupStack {
@@ -2966,10 +2995,10 @@
 
 .optionValueButton {
   min-height: 40px;
-  border: 1px solid rgba(201, 183, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 14px;
   padding: 0 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--store-text);
   font-size: 14px;
   line-height: 1;
@@ -2981,8 +3010,8 @@
 
 .optionValueButtonActive {
   border-color: var(--store-border-strong);
-  background: rgba(180, 156, 255, 0.16);
-  box-shadow: 0 10px 18px rgba(115, 93, 186, 0.16);
+  background: rgba(180, 156, 255, 0.12);
+  box-shadow: 0 8px 16px rgba(115, 93, 186, 0.14);
 }
 
 .optionSwatch {
@@ -3007,7 +3036,7 @@
   border: 1px solid var(--store-border);
   border-radius: 16px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
   font-size: 13px;
   line-height: 1.3;
   color: var(--store-text-soft);
@@ -3044,7 +3073,7 @@
   border: 1px solid var(--store-border);
   border-radius: 18px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .specsPreviewTitle,
@@ -3064,7 +3093,7 @@
   gap: 10px;
   padding-top: 8px;
   margin-top: 8px;
-  border-top: 1px solid rgba(201, 183, 255, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   font-size: 13px;
   line-height: 1.35;
   color: var(--store-text-soft);
@@ -3136,7 +3165,6 @@
   padding: 20px 16px;
   display: flex;
   align-items: flex-end;
-  animation: store-fade-in var(--store-motion-base) var(--store-motion-ease) both;
 }
 
 .specsModal {
@@ -3151,7 +3179,6 @@
     linear-gradient(180deg, rgba(39, 31, 57, 0.99), rgba(23, 19, 31, 0.99));
   box-shadow: 0 34px 72px rgba(4, 3, 10, 0.48);
   padding: 18px;
-  animation: store-sheet-up var(--store-motion-slow) var(--store-motion-soft-bounce) both;
 }
 
 .specsModalHead {
@@ -3194,8 +3221,8 @@
 
 .infoItem {
   background:
-    linear-gradient(180deg, rgba(180, 156, 255, 0.06), rgba(180, 156, 255, 0)),
-    linear-gradient(180deg, rgba(37, 29, 54, 0.96), rgba(27, 22, 38, 0.96));
+    linear-gradient(180deg, rgba(180, 156, 255, 0.04), rgba(180, 156, 255, 0)),
+    linear-gradient(180deg, rgba(18, 20, 26, 0.96), rgba(9, 10, 13, 0.96));
 }
 
 .infoValue,
@@ -3207,7 +3234,7 @@
   border-color: var(--store-border);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
-    linear-gradient(180deg, rgba(34, 28, 48, 0.96), rgba(22, 18, 30, 0.96));
+    linear-gradient(180deg, rgba(17, 19, 25, 0.96), rgba(8, 9, 12, 0.96));
 }
 
 .loadingBlock::after {
@@ -3259,13 +3286,11 @@
 .reviewCard,
 .miniProductCard {
   transition:
-    transform var(--store-motion-base) var(--store-motion-ease),
     box-shadow var(--store-motion-base) var(--store-motion-ease),
     border-color var(--store-motion-fast) ease,
     background-color var(--store-motion-fast) ease,
     background var(--store-motion-fast) ease,
-    color var(--store-motion-fast) ease,
-    opacity var(--store-motion-fast) ease;
+    color var(--store-motion-fast) ease;
 }
 
 .searchInput:focus,
@@ -3278,28 +3303,6 @@
 .productCardAction:focus,
 .bottomNavLink:focus {
   outline: none;
-  transform: translateY(-1px);
-}
-
-.heroButton:active,
-.adminEntryButton:active,
-.primaryButton:active,
-.primaryLinkButton:active,
-.stickyBarButton:active,
-.emptyStateAction:active,
-.sectionAction:active,
-.bannerAction:active,
-.miniShelfAction:active,
-.marketingAction:active,
-.secondaryButton:active,
-.filterButton:active,
-.chip:active,
-.productCardAction:active,
-.optionValueButton:active,
-.specsTrigger:active,
-.specsCloseButton:active,
-.bottomNavLink:active {
-  transform: translateY(1px) scale(0.985);
 }
 
 @media (hover: hover) {
@@ -3312,8 +3315,7 @@
   .miniProductCard:hover,
   .reviewCard:hover,
   .specsPreviewCard:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 24px 40px rgba(4, 3, 10, 0.34);
+    box-shadow: 0 18px 28px rgba(4, 3, 10, 0.24);
   }
 
   .heroButton:hover,
@@ -3331,14 +3333,12 @@
   .productCardAction:hover,
   .specsTrigger:hover,
   .specsCloseButton:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 20px 34px rgba(120, 96, 197, 0.24);
+    box-shadow: 0 14px 20px rgba(120, 96, 197, 0.14);
   }
 
   .chip:hover,
   .bottomNavLink:hover,
   .optionValueButton:hover {
-    transform: translateY(-1px);
     border-color: var(--store-border-strong);
   }
 }
