@@ -11,11 +11,11 @@ import { StoreScreen } from '@/components/store/StoreScreen';
 import { StoreSection } from '@/components/store/StoreSection';
 import { formatStorePrice } from '@/components/store/formatPrice';
 import type { StoreProduct } from '@/components/store/types';
+import styles from '@/components/store/store.module.css';
 import { classNames } from '@/css/classnames';
 import { getCurrentUserContext } from '@/features/auth';
 import { getProductStorefrontData } from '@/features/storefront/data';
 import { getFavoriteProductIdsForProfile } from '@/features/user-store/data';
-import styles from '@/components/store/store.module.css';
 
 function formatDiscountScope(scope: string): string {
   switch (scope) {
@@ -153,6 +153,10 @@ export default async function ProductPage({
     product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents
       ? formatStorePrice(product.compareAtPriceCents, product.currency)
       : null;
+  const savings =
+    product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents
+      ? formatStorePrice(product.compareAtPriceCents - product.priceCents, product.currency)
+      : null;
   const availability = getAvailability(product);
   const media =
     product.media && product.media.length > 0
@@ -173,6 +177,12 @@ export default async function ProductPage({
     .filter(Boolean);
   const collectionNames = (product.collections ?? []).map((collection) => collection.title).join(', ');
   const presentation = product.presentation;
+  const summaryLinks = [
+    presentation?.optionGroups.length ? { href: '#product-options', label: 'Варианты' } : null,
+    presentation?.sizeGuide?.length ? { href: '#product-size-guide', label: 'Размеры' } : null,
+    presentation?.specificationGroups.length ? { href: '#product-specs', label: 'Характеристики' } : null,
+    presentation?.reviews.length ? { href: '#product-reviews', label: 'Отзывы' } : null,
+  ].filter((item): item is { href: string; label: string } => Boolean(item));
 
   return (
     <StoreScreen title="Товар" subtitle={product.title} back={true} showBottomNav={false}>
@@ -203,8 +213,16 @@ export default async function ProductPage({
 
       <div className={styles.productPageBottomSpace}>
         <section className={styles.detailCard}>
-          <div className={styles.detailImage} style={buildDetailImageStyle(leadMedia?.url, product.imageGradient)}>
-            <span className={styles.productImageLabel}>{product.imageLabel}</span>
+          <div
+            className={styles.detailImage}
+            style={buildDetailImageStyle(leadMedia?.url, product.imageGradient)}
+          >
+            <div className={styles.detailImageOverlay}>
+              <span className={styles.productImageLabel}>{product.imageLabel}</span>
+              <div className={styles.detailImageActions}>
+                <FavoriteToggleButton productId={product.id} initialFavorited={isFavorited} compact />
+              </div>
+            </div>
           </div>
 
           {media.length > 1 ? (
@@ -221,22 +239,39 @@ export default async function ProductPage({
           ) : null}
 
           <div className={styles.detailMeta}>
+            <div className={styles.detailBadgeRow}>
+              {product.categoryTitle ? <span className={styles.detailBadge}>{product.categoryTitle}</span> : null}
+              {product.isFeatured ? <span className={styles.detailBadge}>Рекомендуем</span> : null}
+              {product.appliedDiscount ? (
+                <span className={classNames(styles.detailBadge, styles.detailBadgeAccent)}>
+                  {product.appliedDiscount.badgeText}
+                </span>
+              ) : null}
+            </div>
+
             <div className={styles.detailHeading}>
               <h2 className={styles.detailTitle}>{product.title}</h2>
               {product.shortDescription ? <p className={styles.detailLead}>{product.shortDescription}</p> : null}
             </div>
 
-            <div className={styles.detailPriceRow}>
-              <p className={styles.detailPrice}>{price}</p>
-              {compareAtPrice ? <p className={styles.detailPriceCompare}>{compareAtPrice}</p> : null}
+            <div className={styles.detailPriceCard}>
+              <div className={styles.detailPriceRow}>
+                <p className={styles.detailPrice}>{price}</p>
+                {compareAtPrice ? <p className={styles.detailPriceCompare}>{compareAtPrice}</p> : null}
+              </div>
+              <div className={styles.detailPriceMeta}>
+                {savings ? <span className={styles.detailPriceMetaBadge}>Экономия {savings}</span> : null}
+                <span className={styles.detailPriceMetaText}>
+                  {availability.canBuy ? 'Цена актуальна для заказа сейчас' : 'Цена сохранена для повторной проверки позже'}
+                </span>
+              </div>
+              {product.appliedDiscount ? (
+                <p className={styles.detailDiscountNote}>
+                  {product.appliedDiscount.badgeText} по скидке {formatDiscountScope(product.appliedDiscount.scope)} «
+                  {product.appliedDiscount.title}».
+                </p>
+              ) : null}
             </div>
-
-            {product.appliedDiscount ? (
-              <p className={styles.detailDiscountNote}>
-                {product.appliedDiscount.badgeText} по скидке {formatDiscountScope(product.appliedDiscount.scope)} «
-                {product.appliedDiscount.title}».
-              </p>
-            ) : null}
 
             <section
               className={classNames(
@@ -245,9 +280,29 @@ export default async function ProductPage({
                 availability.tone === 'danger' && styles.detailAvailabilityDanger,
               )}
             >
-              <p className={styles.detailAvailabilityTitle}>{availability.title}</p>
-              <p className={styles.detailAvailabilityText}>{availability.description}</p>
+              <div>
+                <p className={styles.detailAvailabilityTitle}>{availability.title}</p>
+                <p className={styles.detailAvailabilityText}>{availability.description}</p>
+              </div>
+              <div className={styles.detailAvailabilityActions}>
+                <AddToCartButton
+                  productId={product.id}
+                  className={styles.detailBuyButton}
+                  disabled={!availability.canBuy}
+                  disabledLabel="Нет в наличии"
+                />
+              </div>
             </section>
+
+            {summaryLinks.length > 0 ? (
+              <div className={styles.detailShortcutRow}>
+                {summaryLinks.map((item) => (
+                  <a key={item.href} href={item.href} className={styles.detailShortcutChip}>
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
 
             <div className={styles.infoGrid}>
               <div className={styles.infoItem}>
@@ -280,9 +335,19 @@ export default async function ProductPage({
               )}
             </div>
 
+            <div className={styles.detailSupportList}>
+              <div className={styles.detailSupportItem}>
+                <strong>Покупка в Telegram</strong>
+                <span>Можно вернуться назад без потери истории навигации и продолжить выбор внутри Mini App.</span>
+              </div>
+              <div className={styles.detailSupportItem}>
+                <strong>Каталог рядом</strong>
+                <span>Карточка не ломает путь из каталога и безопасно открывается по прямой ссылке.</span>
+              </div>
+            </div>
+
             <div className={styles.detailActions}>
               <div className={styles.detailActionGrid}>
-                <FavoriteToggleButton productId={product.id} initialFavorited={isFavorited} />
                 <ProductShareButton productSlug={product.slug} productTitle={product.title} />
               </div>
               <Link href="/catalog" className={styles.secondaryInlineLink} aria-label="Вернуться в каталог">
@@ -294,15 +359,8 @@ export default async function ProductPage({
 
         {presentation ? <StoreProductExperience presentation={presentation} /> : null}
 
-        <section className={styles.panel}>
-          <h2 className={styles.panelTitle}>Что важно перед покупкой</h2>
-          <p className={styles.panelText}>
-            Карточка открывается и по прямой ссылке, и внутри магазина в Telegram. Вы можете спокойно вернуться назад: товар останется в истории навигации.
-          </p>
-        </section>
-
         {productData.relatedProducts.length > 0 ? (
-          <StoreSection title="Может подойти ещё">
+          <StoreSection title="С этим товаром смотрят">
             <div className={styles.scrollRow}>
               {productData.relatedProducts.map((item) => (
                 <ProductCard key={item.id} product={item} href={`/products/${item.slug}`} compact />
@@ -313,7 +371,11 @@ export default async function ProductPage({
       </div>
 
       <div className={styles.stickyBar}>
-        <div className={styles.stickyBarInner}>
+        <div className={classNames(styles.stickyBarInner, styles.productStickyBarInner)}>
+          <div className={styles.productStickyBarPrice}>
+            <strong>{price}</strong>
+            <span>{availability.title}</span>
+          </div>
           <AddToCartButton
             productId={product.id}
             className={styles.stickyBarButton}
