@@ -1,10 +1,17 @@
 'use client';
 
-import { backButton } from '@tma.js/sdk-react';
+import { backButton, closingBehavior, swipeBehavior } from '@tma.js/sdk-react';
 import { PropsWithChildren, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { resolveTelegramBackFallback } from '@/features/telegram/navigation';
+import {
+  buildTelegramNavigationEntry,
+  consumeTelegramBackTarget,
+  rememberTelegramNavigationEntry,
+  resolveTelegramBackFallback,
+  shouldDisableTelegramVerticalSwipe,
+  shouldProtectTelegramClose,
+} from '@/features/telegram/navigation';
 
 export function Page({ children, back = true }: PropsWithChildren<{
   /**
@@ -15,12 +22,31 @@ export function Page({ children, back = true }: PropsWithChildren<{
 }>) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentEntry = buildTelegramNavigationEntry(pathname, searchParams.toString());
+  const fallbackHref = resolveTelegramBackFallback(pathname);
+  const protectClose = shouldProtectTelegramClose(pathname);
+  const disableVerticalSwipe = shouldDisableTelegramVerticalSwipe(pathname);
+
+  useEffect(() => {
+    rememberTelegramNavigationEntry(currentEntry);
+  }, [currentEntry]);
+
+  useEffect(() => {
+    backButton.mount.ifAvailable();
+    closingBehavior.mount.ifAvailable();
+    swipeBehavior.mount.ifAvailable();
+
+    return () => {
+      backButton.hide.ifAvailable();
+    };
+  }, []);
 
   useEffect(() => {
     if (back) {
-      backButton.show();
+      backButton.show.ifAvailable();
     } else {
-      backButton.hide();
+      backButton.hide.ifAvailable();
     }
   }, [back]);
 
@@ -30,15 +56,37 @@ export function Page({ children, back = true }: PropsWithChildren<{
         return;
       }
 
-      const fallbackHref = resolveTelegramBackFallback(pathname);
-      if (fallbackHref && fallbackHref !== pathname) {
-        router.replace(fallbackHref);
+      const target = consumeTelegramBackTarget(currentEntry, fallbackHref);
+      if (target && target !== currentEntry) {
+        router.replace(target);
         return;
       }
 
       router.back();
     });
-  }, [back, pathname, router]);
+  }, [back, currentEntry, fallbackHref, router]);
+
+  useEffect(() => {
+    if (protectClose) {
+      closingBehavior.enableConfirmation.ifAvailable();
+      return () => {
+        closingBehavior.disableConfirmation.ifAvailable();
+      };
+    }
+
+    closingBehavior.disableConfirmation.ifAvailable();
+  }, [protectClose]);
+
+  useEffect(() => {
+    if (disableVerticalSwipe) {
+      swipeBehavior.disableVertical.ifAvailable();
+      return () => {
+        swipeBehavior.enableVertical.ifAvailable();
+      };
+    }
+
+    swipeBehavior.enableVertical.ifAvailable();
+  }, [disableVerticalSwipe]);
 
   return <>{children}</>;
 }

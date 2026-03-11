@@ -2387,12 +2387,55 @@
     radial-gradient(circle at 14% -4%, rgba(180, 156, 255, 0.18), transparent 28%),
     radial-gradient(circle at 88% 0%, rgba(117, 93, 196, 0.14), transparent 26%),
     linear-gradient(180deg, #18131f 0, #15111a 220px, var(--store-bg) 100%);
+  overflow-x: clip;
 }
 
 .header {
   background: rgba(20, 17, 26, 0.82);
   border-bottom: 1px solid var(--store-border);
   box-shadow: 0 14px 34px rgba(5, 4, 10, 0.24);
+}
+
+.headerInner {
+  animation: store-fade-in-up var(--store-motion-screen) var(--store-motion-ease) both;
+}
+
+.containerMotion > * {
+  opacity: 0;
+  animation: store-fade-in-up var(--store-motion-slow) var(--store-motion-soft-bounce) both;
+  will-change: transform, opacity;
+}
+
+.containerMotion > *:nth-child(1) {
+  animation-delay: 40ms;
+}
+
+.containerMotion > *:nth-child(2) {
+  animation-delay: 80ms;
+}
+
+.containerMotion > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+
+.containerMotion > *:nth-child(4) {
+  animation-delay: 160ms;
+}
+
+.containerMotion > *:nth-child(5) {
+  animation-delay: 200ms;
+}
+
+.containerMotion > *:nth-child(6) {
+  animation-delay: 240ms;
+}
+
+.containerMotion > *:nth-child(7) {
+  animation-delay: 280ms;
+}
+
+.containerMotion > *:nth-child(8) {
+  animation-delay: 320ms;
 }
 
 .headerTag,
@@ -3131,6 +3174,7 @@
   padding: 20px 16px;
   display: flex;
   align-items: flex-end;
+  animation: store-fade-in var(--store-motion-base) var(--store-motion-ease) both;
 }
 
 .specsModal {
@@ -3145,6 +3189,7 @@
     linear-gradient(180deg, rgba(39, 31, 57, 0.99), rgba(23, 19, 31, 0.99));
   box-shadow: 0 34px 72px rgba(4, 3, 10, 0.48);
   padding: 18px;
+  animation: store-sheet-up var(--store-motion-slow) var(--store-motion-soft-bounce) both;
 }
 
 .specsModalHead {
@@ -3210,6 +3255,130 @@
     rgba(214, 199, 255, 0.12) 45%,
     rgba(255, 255, 255, 0) 100%
   );
+}
+
+.heroButton,
+.adminEntryButton,
+.primaryButton,
+.primaryLinkButton,
+.stickyBarButton,
+.emptyStateAction,
+.sectionAction,
+.bannerAction,
+.miniShelfAction,
+.marketingAction,
+.secondaryButton,
+.filterButton,
+.catalogSelect,
+.searchInput,
+.quantityButton,
+.cartRemoveButton,
+.dataNoticeRetry,
+.secondaryInlineLink,
+.chip,
+.categoryShortcut,
+.categoryListItem,
+.quickLinkCard,
+.bannerCard,
+.collectionCard,
+.productCard,
+.productCardAction,
+.productCardFavorite .secondaryButton,
+.bottomNavLink,
+.cartItem,
+.orderCard,
+.orderItemRow,
+.detailCard,
+.infoItem,
+.optionValueButton,
+.specsTrigger,
+.specsCloseButton,
+.specsPreviewCard,
+.reviewCard,
+.miniProductCard {
+  transition:
+    transform var(--store-motion-base) var(--store-motion-ease),
+    box-shadow var(--store-motion-base) var(--store-motion-ease),
+    border-color var(--store-motion-fast) ease,
+    background-color var(--store-motion-fast) ease,
+    background var(--store-motion-fast) ease,
+    color var(--store-motion-fast) ease,
+    opacity var(--store-motion-fast) ease;
+}
+
+.searchInput:focus,
+.catalogSelect:focus,
+.optionValueButton:focus,
+.specsTrigger:focus,
+.specsCloseButton:focus,
+.chip:focus,
+.filterButton:focus,
+.productCardAction:focus,
+.bottomNavLink:focus {
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.heroButton:active,
+.adminEntryButton:active,
+.primaryButton:active,
+.primaryLinkButton:active,
+.stickyBarButton:active,
+.emptyStateAction:active,
+.sectionAction:active,
+.bannerAction:active,
+.miniShelfAction:active,
+.marketingAction:active,
+.secondaryButton:active,
+.filterButton:active,
+.chip:active,
+.productCardAction:active,
+.optionValueButton:active,
+.specsTrigger:active,
+.specsCloseButton:active,
+.bottomNavLink:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+@media (hover: hover) {
+  .quickLinkCard:hover,
+  .bannerCard:hover,
+  .collectionCard:hover,
+  .categoryShortcut:hover,
+  .categoryListItem:hover,
+  .productCard:hover,
+  .miniProductCard:hover,
+  .reviewCard:hover,
+  .specsPreviewCard:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 40px rgba(4, 3, 10, 0.34);
+  }
+
+  .heroButton:hover,
+  .adminEntryButton:hover,
+  .primaryButton:hover,
+  .primaryLinkButton:hover,
+  .stickyBarButton:hover,
+  .emptyStateAction:hover,
+  .sectionAction:hover,
+  .bannerAction:hover,
+  .miniShelfAction:hover,
+  .marketingAction:hover,
+  .secondaryButton:hover,
+  .filterButton:hover,
+  .productCardAction:hover,
+  .specsTrigger:hover,
+  .specsCloseButton:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 34px rgba(120, 96, 197, 0.24);
+  }
+
+  .chip:hover,
+  .bottomNavLink:hover,
+  .optionValueButton:hover {
+    transform: translateY(-1px);
+    border-color: var(--store-border-strong);
+  }
 }
 
 @media (max-width: 520px) {

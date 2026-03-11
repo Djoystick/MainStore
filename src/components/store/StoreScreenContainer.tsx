@@ -16,6 +16,7 @@ export function StoreScreenContainer({
     <div
       className={classNames(
         styles.container,
+        styles.containerMotion,
         hasBottomNav ? styles.containerWithBottomNav : styles.containerWithoutBottomNav,
       )}
     >

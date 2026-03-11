@@ -1,5 +1,13 @@
 import { retrieveLaunchParams } from '@tma.js/sdk-react';
 
+const TELEGRAM_NAVIGATION_STACK_KEY = 'mainstore:telegram-navigation-stack';
+const TELEGRAM_NAVIGATION_STACK_LIMIT = 48;
+
+interface TelegramNavigationState {
+  entries: string[];
+  suppressNext?: string | null;
+}
+
 export function resolveTelegramBackFallback(pathname: string): string {
   if (!pathname || pathname === '/') {
     return '/';
@@ -37,6 +45,10 @@ export function resolveTelegramBackFallback(pathname: string): string {
     return '/admin/orders';
   }
 
+  if (pathname === '/admin') {
+    return '/profile';
+  }
+
   if (pathname.startsWith('/admin/products/') && pathname.endsWith('/edit')) {
     return '/admin/products';
   }
@@ -50,6 +62,131 @@ export function resolveTelegramBackFallback(pathname: string): string {
   }
 
   return '/';
+}
+
+export function buildTelegramNavigationEntry(pathname: string, search?: string | null): string {
+  if (!pathname) {
+    return '/';
+  }
+
+  if (!search) {
+    return pathname;
+  }
+
+  const normalizedSearch = search.startsWith('?') ? search : `?${search}`;
+  return `${pathname}${normalizedSearch}`;
+}
+
+function readTelegramNavigationState(): TelegramNavigationState {
+  if (typeof window === 'undefined') {
+    return { entries: [] };
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(TELEGRAM_NAVIGATION_STACK_KEY);
+    if (!raw) {
+      return { entries: [] };
+    }
+
+    const parsed = JSON.parse(raw) as Partial<TelegramNavigationState> | null;
+    if (!parsed || !Array.isArray(parsed.entries)) {
+      return { entries: [] };
+    }
+
+    const entries = parsed.entries.filter((entry): entry is string => typeof entry === 'string' && entry.length > 0);
+    return {
+      entries,
+      suppressNext: typeof parsed.suppressNext === 'string' ? parsed.suppressNext : null,
+    };
+  } catch {
+    return { entries: [] };
+  }
+}
+
+function writeTelegramNavigationState(state: TelegramNavigationState): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(
+      TELEGRAM_NAVIGATION_STACK_KEY,
+      JSON.stringify({
+        entries: state.entries.slice(-TELEGRAM_NAVIGATION_STACK_LIMIT),
+        suppressNext: state.suppressNext ?? null,
+      }),
+    );
+  } catch {
+    // Ignore storage failures and fall back to route-based navigation.
+  }
+}
+
+export function rememberTelegramNavigationEntry(entry: string): void {
+  if (!entry) {
+    return;
+  }
+
+  const state = readTelegramNavigationState();
+
+  if (state.suppressNext === entry) {
+    writeTelegramNavigationState({
+      entries: state.entries.length > 0 ? state.entries : [entry],
+      suppressNext: null,
+    });
+    return;
+  }
+
+  const lastEntry = state.entries[state.entries.length - 1];
+  if (lastEntry === entry) {
+    if (state.suppressNext) {
+      writeTelegramNavigationState({
+        entries: state.entries,
+        suppressNext: null,
+      });
+    }
+    return;
+  }
+
+  writeTelegramNavigationState({
+    entries: [...state.entries, entry].slice(-TELEGRAM_NAVIGATION_STACK_LIMIT),
+    suppressNext: null,
+  });
+}
+
+export function consumeTelegramBackTarget(currentEntry: string, fallbackHref: string): string | null {
+  const state = readTelegramNavigationState();
+  const currentIndex = state.entries.lastIndexOf(currentEntry);
+
+  if (currentIndex > 0) {
+    const nextEntries = state.entries.slice(0, currentIndex);
+    const target = nextEntries[nextEntries.length - 1] ?? fallbackHref;
+
+    writeTelegramNavigationState({
+      entries: nextEntries.length > 0 ? nextEntries : [target],
+      suppressNext: target,
+    });
+
+    return target;
+  }
+
+  if (!fallbackHref || fallbackHref === currentEntry) {
+    return null;
+  }
+
+  writeTelegramNavigationState({
+    entries: [fallbackHref],
+    suppressNext: fallbackHref,
+  });
+
+  return fallbackHref;
+}
+
+export function shouldProtectTelegramClose(pathname: string): boolean {
+  return pathname === '/checkout' || pathname.startsWith('/pay/');
+}
+
+export function shouldDisableTelegramVerticalSwipe(pathname: string): boolean {
+  return pathname === '/checkout' || pathname.startsWith('/pay/');
 }
 
 export function buildStoreAbsoluteUrl(pathname: string, origin: string): string {

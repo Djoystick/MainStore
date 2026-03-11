@@ -13,6 +13,7 @@ export default async function AdminPage() {
 
   return (
     <AdminScreen
+      back={true}
       title="Админка"
       subtitle="Рабочее пространство для каталога, заказов и импорта"
     >

@@ -882,6 +882,27 @@
   border-radius: 14px;
 }
 
+.adminNavLink,
+.adminCard,
+.adminPageLead,
+.adminSummaryCard,
+.adminLinkCard,
+.adminMetaCell,
+.adminActionLink,
+.adminPrimaryLink,
+.adminSecondaryButton,
+.adminDangerButton,
+.adminNoAccess {
+  transition:
+    transform var(--store-motion-base) var(--store-motion-ease),
+    box-shadow var(--store-motion-base) var(--store-motion-ease),
+    border-color var(--store-motion-fast) ease,
+    background-color var(--store-motion-fast) ease,
+    background var(--store-motion-fast) ease,
+    color var(--store-motion-fast) ease,
+    opacity var(--store-motion-fast) ease;
+}
+
 .adminNavLinkActive {
   color: var(--store-text);
   border-color: var(--store-border-strong);
@@ -965,4 +986,24 @@
 
 .adminError {
   color: #ffd7dd;
+}
+
+@media (hover: hover) {
+  .adminCard:hover,
+  .adminPageLead:hover,
+  .adminSummaryCard:hover,
+  .adminLinkCard:hover,
+  .adminNoAccess:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 24px 40px rgba(4, 3, 10, 0.3);
+  }
+
+  .adminActionLink:hover,
+  .adminPrimaryLink:hover,
+  .adminSecondaryButton:hover,
+  .adminDangerButton:hover,
+  .adminNavLink:hover {
+    transform: translateY(-1px);
+    border-color: var(--store-border-strong);
+  }
 }
